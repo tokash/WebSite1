@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using Facebook;
 using FacebookCrawler.FBObjects;
 using Newtonsoft.Json;
+using System.IO;
+using System.Collections.Specialized;
+using System.Configuration;
 
 namespace FacebookCrawler
 {
@@ -23,18 +22,27 @@ namespace FacebookCrawler
         {
             _FBClient = new FacebookClient();
             _JsonSerializer.RegisterConverters(new[] { new DynamicJsonConverter() });
+            _ConfigurationValues = (NameValueCollection)ConfigurationManager.GetSection("Data");
+
+            GetUserAccessToken();
         }
 
         public FaceBookAPI(string iAccessToken)
         {
             _FBClient = new FacebookClient(iAccessToken);
             _JsonSerializer.RegisterConverters(new[] { new DynamicJsonConverter() });
+            _ConfigurationValues = (NameValueCollection)ConfigurationManager.GetSection("Data");
+
+            GetUserAccessToken();
         }
 
 
         #region Memebers
         FacebookClient _FBClient;
         JavaScriptSerializer _JsonSerializer = new JavaScriptSerializer();
+        string _UserAccessToken;
+        string _ApplicationAccessToken;
+        NameValueCollection _ConfigurationValues;
 
         public string AccessToken { get { return _FBClient.AccessToken; } } 
         #endregion
@@ -72,7 +80,7 @@ namespace FacebookCrawler
             return isValid;
         }
 
-        public void GetNewShortLivedAccessToken()
+        public void GetNewShortLivedUserAccessToken()
         {
             try
             {
@@ -83,12 +91,63 @@ namespace FacebookCrawler
                         grant_type = "client_credentials"
                     });
 
-                _FBClient.AccessToken = result.access_token;
+                _UserAccessToken = result.access_token;
+                _FBClient.AccessToken = _UserAccessToken;
             }
             catch (Exception ex)
             {
                 throw;
             }
+        }
+
+        public void GetApplicationAccessToken()
+        {
+
+        }
+
+        private void GetUserAccessToken()
+        {
+            String line;
+
+            try
+            {
+                if (_ConfigurationValues != null)
+                {
+                    FaceBookToken facebookToken = new FaceBookToken();
+                    string accessTokenFilename = _ConfigurationValues["AccessTokenFileName"];
+                    string path = Path.GetTempPath() + accessTokenFilename;
+
+                    using (StreamReader sr = new StreamReader(path))
+                    {
+                        line = sr.ReadToEnd();
+                    }
+
+                    string[] tokenFileSplit = line.Split('\n');
+                    facebookToken.access_token = tokenFileSplit[0];
+                    facebookToken.expires = DateTime.Parse(tokenFileSplit[1]);
+
+                    if (DateTime.Now < facebookToken.expires)
+                    {
+                        _FBClient.AccessToken = facebookToken.access_token;
+                    }
+                    else
+                    {
+                        //Need to get a new access token, in the meanwhile throw exception
+                        throw new Exception("Current user access token has expired");
+                    }
+                }
+                else
+                {
+                    throw new Exception("No user token source, user token is needed before any contact is made with facebook");
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+
+            
+
         }
 
         public void PrintTokenInfo(TokenInfo iTokenInfo)
@@ -158,10 +217,10 @@ namespace FacebookCrawler
             //GET /me/feed
             try
             {
-                object result = _FBClient.Get(string.Format("/{0}/feed", iUserName));
 
-                object info = JsonConvert.DeserializeObject(result.ToString());
-                
+                dynamic result = _FBClient.Get(string.Format("/{0}/feed", iUserName));
+
+                var info = _JsonSerializer.DeserializeObject(result.ToString());
 
             }
             catch (Exception ex)

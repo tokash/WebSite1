@@ -14,11 +14,12 @@ namespace FacebookCrawler
         private static string AppSecret = "485456384f450bde62bc9eacbfc2c316";
         private static string ClientToken = "35673ccf126aaf11244cbd1b9b813c84";
         private static string AppToken = "630904423618987|NTKVsaFHzzi4E-sD2Rodb8ECSCE";
-        private static string UserToken = "CAAI9zeIOmasBAF7qLfY8WIXbs5RTz1DZBI7N2YJtirZCZB1FeHRJZCsNFkhZCFJyhVdcVKqNGdg7sRs4mQfis5mRmQ4eMZCGZBEMoMyD44WvRRAmXLWgScTJjTGRsxVPUHjkUswMbMX3ZAbOA6CoyNRdsPdETe4ZCrOFjET3uNHUUafR4EgnguVstlpL19ZCNKCU706cvHZBM8pjnqxmADoqitYOnuoZC4TyEtUGnKpxzbG7zwZDZD";
+        private static string UserToken = "CAAI9zeIOmasBAA7uzNklhZC8xSGGTZBHUjJZBYkLDgBtn2AXLxDaZCSs0NshY68b7OLuVZAUZCUy71gMIg29jlfqdZBb3wO9kRBFF1td77hxyqkOXMmxKTPh65RtfkCNlDoxx8cPzhx08zxsrcRIkZBjbDJj341kTJOPk88baTjvZBk7MSZCwH9w6jcKW3dAm2ZA3kOCQzlEGvNcFpijYsJiwD6I0K1M9m7SzTClvmZAsfzmnQZDZD";
         
 
         static void Main(string[] args)
         {
+
             //FacebookClient fb = new FacebookClient();
             //dynamic result = fb.Get("oauth/access_token", new
             //{
@@ -28,28 +29,22 @@ namespace FacebookCrawler
             //});
 
             FaceBookAPI fb = new FaceBookAPI();
-            TokenInfo tokenInfo = null;
 
-            try
-            {
-                fb.GetNewShortLivedAccessToken();
-                if (fb.IsTokenValid(fb.AccessToken, ref tokenInfo))
-                {
-                    fb.GetUserComments("keshet.mako");
-                }
+            
+            fb.GetUserComments("keshet.mako");
 
                 
 
-                //if (tokenInfo != null)
-                //{
-                //    fb.PrintTokenInfo(tokenInfo);
-                //}
-            }
-            catch (Exception ex)
-            {
+            //    //if (tokenInfo != null)
+            //    //{
+            //    //    fb.PrintTokenInfo(tokenInfo);
+            //    //}
+            //}
+            //catch (Exception ex)
+            //{
 
-                Console.WriteLine(ex.ToString());
-            }
+            //    Console.WriteLine(ex.ToString());
+            //}
 
             //fb.AccessToken = result.access_token;
 
