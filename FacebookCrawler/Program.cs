@@ -30,10 +30,8 @@ namespace FacebookCrawler
 
             FaceBookAPI fb = new FaceBookAPI();
 
-            
-            fb.GetUserComments("keshet.mako");
-
-                
+            //"[א-ת]\'"
+            List<Datum> posts = fb.GetPostsMatchingRegexPattern("tzahalonline", "[\u0591-\u05F4][\u0591-\u05F4]\"[\u0591-\u05F4] [\u0591-\u05F4]\'", new DateTime(2011, 1, 1), DateTime.Now);//fb.GetAllPostsFromFeed("yossi.tokash");
 
             //    //if (tokenInfo != null)
             //    //{
