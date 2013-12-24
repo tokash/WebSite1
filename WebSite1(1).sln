@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FacebookCrawler", "FacebookCrawler\FacebookCrawler.csproj", "{3E12F419-ACAF-46AC-8E72-6CFCA79DD16F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TextFileWriter", "TextFileWriter\TextFileWriter.csproj", "{FE15D583-215F-439F-A2DA-4FBCFD1EF670}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -13,6 +15,10 @@ Global
 		{3E12F419-ACAF-46AC-8E72-6CFCA79DD16F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3E12F419-ACAF-46AC-8E72-6CFCA79DD16F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3E12F419-ACAF-46AC-8E72-6CFCA79DD16F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE15D583-215F-439F-A2DA-4FBCFD1EF670}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE15D583-215F-439F-A2DA-4FBCFD1EF670}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE15D583-215F-439F-A2DA-4FBCFD1EF670}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE15D583-215F-439F-A2DA-4FBCFD1EF670}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

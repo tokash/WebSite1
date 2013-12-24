@@ -9,6 +9,8 @@ using System.Configuration;
 using System.Collections.Generic;
 using System.Web;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Diagnostics;
 
 namespace FacebookCrawler
 {
@@ -17,6 +19,7 @@ namespace FacebookCrawler
         private static string AppID = "630904423618987";
         private static string AppSecret = "485456384f450bde62bc9eacbfc2c316";
         private static string AppToken = "630904423618987|NTKVsaFHzzi4E-sD2Rodb8ECSCE";
+        
 
         /*TODO:
          * Add function IsTokenValid
@@ -46,6 +49,7 @@ namespace FacebookCrawler
         string _UserAccessToken;
         string _ApplicationAccessToken;
         NameValueCollection _ConfigurationValues;
+        static Semaphore _Semaphore = new Semaphore(3, 3);
 
         public string AccessToken { get { return _FBClient.AccessToken; } } 
         #endregion
@@ -377,7 +381,7 @@ namespace FacebookCrawler
             return posts;
         }
 
-        public List<Datum> GetPostsMatchingRegexPattern(string iUserName, string iRegexPattern, DateTime iSince, DateTime iUntil)
+        public List<Datum> GetPostsMatchingRegexPattern(string iUserName, string iRegexPattern, DateTime iSince, DateTime iUntil, ref List<Datum> oTotalPosts)
         {
             List<Datum> posts = new List<Datum>();
             DateTime next = iUntil;
@@ -387,10 +391,10 @@ namespace FacebookCrawler
                 try
                 {
                     object result = _FBClient.Get(string.Format("/{0}/feed", iUserName));
+                    System.Threading.Thread.Sleep(1000);
                     string res = result.ToString();
 
                     FacebookFeed facebookFeed = JsonConvert.DeserializeObject<FacebookFeed>(res);
-                    //posts.AddRange(facebookFeed.data);
 
                     foreach (Datum post in facebookFeed.data)
                     {
@@ -403,7 +407,8 @@ namespace FacebookCrawler
                                 if (Regex.IsMatch(post.message, iRegexPattern))
                                 {
                                     posts.Add(post);
-                                } 
+                                }
+                                oTotalPosts.Add(post);
                             }
                         }
                         else
@@ -425,8 +430,10 @@ namespace FacebookCrawler
                                 if (facebookFeed.paging.next != string.Empty)
                                 {
                                     result = _FBClient.Get(facebookFeed.paging.next);
+                                    System.Threading.Thread.Sleep(1000);
                                     res = result.ToString();
                                     facebookFeed = JsonConvert.DeserializeObject<FacebookFeed>(res);
+                                    oTotalPosts.AddRange(facebookFeed.data);
 
                                     foreach (Datum post in facebookFeed.data)
                                     {
@@ -439,7 +446,8 @@ namespace FacebookCrawler
                                                 if (Regex.IsMatch(post.message, iRegexPattern))
                                                 {
                                                     posts.Add(post);
-                                                } 
+                                                }
+                                                oTotalPosts.Add(post);
                                             }
                                         }
                                         else
@@ -501,58 +509,126 @@ namespace FacebookCrawler
                     }
                     else
                     {
-                        throw ex;
+                        Console.WriteLine(ex.ToString());
+                        break;
                     }
                 }
             }
 
             return posts;
         }
-        /*
-         * while(true)
-         * {
-         *      try
-         *      {
-         *      
-         *          GetPosts()
-         *      }
-         *      catch()
-         *      {
-         *          check which error it is and wait it out
-         *      }
-         * }
-         * 
-         What do i need to do:
-         * 1.Look in specific facebook pages for any posts that have a hebrew letter and an apostrophe,
-         *      presumably with a rank before it but not only.
-         *      so, i should look for something like this : 'ג or this 'אל"מ ג
-         *      
-         * 2.After finding this pattern in the post, i need to create a tree of users, that commented on that posts
-         *      and do that for the comments on their comments and so on until i have all comments in hand
-         *      
-         *  Should look like this: lets say mako is the origin
-         *  mako
-         *      -post that has the pattern in it
-         *          -comments
-         *              -commments on comment of user1
-         *                  -comments on comment of user11
-         *                  -comments on comment of user11
-         *                      -
-         *                          -
-         *                          -
-         *                              -
-         *                                  -
-         *                                      -
-         *              -commments on comment of user2
-         *                  -comments on comment of user11
-         *                  -comments on comment of user11
-         *          -also, need to go over all sharers of post too
-         *          
-         * 3.Facebook has limits over the usage of its API, so there will be a need to stop the program
-         *      for a while (30 minutes\ 60 minutes depending on the exception)
-         *      before the program can continue its search
-         *      
-         * 4.Facebook API doesn't return all the posts at once, so there will be a need to paginate through the results
-         */
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="iPost"> The post object</param>
+        /// <param name="iNumberOfCommentsToGet">How many comments to get for the post, default = 0 (0 = get all comments)</param>
+        /// <returns></returns>
+        public List<Datum4> GetMoreCommentsForPost(Datum iPost, int iNumberOfCommentsToGet = 0)
+        {
+            List<Datum4> comments = new List<Datum4>();
+
+            int i = 0;
+            string nextPage = iPost.comments.paging.next;
+
+            try
+            {
+                if (iNumberOfCommentsToGet == 0)
+                {
+                    while (nextPage != null)
+                    {
+                        if (iPost.comments.paging != null)
+                        {
+                            if (nextPage != null && nextPage != string.Empty)
+                            {
+                                object result = _FBClient.Get(nextPage);
+                                System.Threading.Thread.Sleep(1000);
+                                string res = result.ToString();
+                                Comments currCommentsBatch = JsonConvert.DeserializeObject<Comments>(res);
+
+                                comments.AddRange(currCommentsBatch.data);
+                                nextPage = currCommentsBatch.paging.next;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    while (i < iNumberOfCommentsToGet && nextPage != null)
+                    {
+                        object result = _FBClient.Get(nextPage);
+                        System.Threading.Thread.Sleep(1000);
+                        string res = result.ToString();
+                        Comments currCommentsBatch = JsonConvert.DeserializeObject<Comments>(res);
+
+                        comments.AddRange(currCommentsBatch.data);
+                        nextPage = currCommentsBatch.paging.next;
+
+                        i += currCommentsBatch.data.Count;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains("4")) //App level rate limit - sleep 60 minutes
+                {
+                    Console.WriteLine("Waiting 60 minutes - App level limit reached");
+                    System.Threading.Thread.Sleep(3600000);
+                }
+                else if (ex.Message.Contains("17")) //User level rate limit - sleep 30 minutes
+                {
+                    Console.WriteLine("Waiting 30 minutes - User level limit reached");
+                    System.Threading.Thread.Sleep(1800000);
+                }
+                else if (ex.Message.Contains("2"))
+                {
+                    System.Threading.Thread.Sleep(2000);
+                }
+                else
+                {
+                    throw ex;
+                }
+            }
+
+            return comments;
+        }
+
+        public void GetFeedInformation(string iFeedName, DateTime iStartTime, DateTime iEndTime)
+        {
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+
+            Console.WriteLine("{0} is waiting in line...", Thread.CurrentThread.Name);
+            _Semaphore.WaitOne();
+            Console.WriteLine("{0} is Working...", Thread.CurrentThread.Name);
+            List<Datum> totalPosts = new List<Datum>();
+
+            List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName, "[\u0591-\u05F4][\u0591-\u05F4]\"[\u0591-\u05F4] [\u0591-\u05F4]\'", iStartTime, iEndTime, ref totalPosts);
+            //List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName, "", iStartTime, iEndTime, ref totalPosts);
+            
+            foreach (Datum post in posts)
+            {
+                if (post.comments != null)
+                {
+                    post.comments.data.AddRange(GetMoreCommentsForPost(post));
+                }
+            }
+
+            string results = string.Empty;
+            foreach (Datum post in posts)
+            {
+                results += FBResultFormatter.FormatFBPost(post, iFeedName);
+            }
+
+            FBResultFormatter.FormatFBStats(totalPosts.Count, posts.Count, iStartTime, iEndTime, ref results);
+
+            string fileRepository = ConfigurationManager.AppSettings["ResultsLocation"];
+
+            TextFileWriter.TextFileWriter.WriteTextFile(string.Format("{0}{1}.txt",fileRepository, iFeedName), results);
+            sw.Stop();
+            Console.WriteLine("{0} is done, total work time for thread: {1}", Thread.CurrentThread.Name, sw.Elapsed);
+
+            _Semaphore.Release();
+        }
     }
 }

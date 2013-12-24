@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 using Facebook;
 using FacebookCrawler.FBObjects;
+using TextFileWriter;
 
 namespace FacebookCrawler
 {
@@ -30,8 +34,29 @@ namespace FacebookCrawler
 
             FaceBookAPI fb = new FaceBookAPI();
 
-            //"[א-ת]\'"
-            List<Datum> posts = fb.GetPostsMatchingRegexPattern("tzahalonline", "[\u0591-\u05F4][\u0591-\u05F4]\"[\u0591-\u05F4] [\u0591-\u05F4]\'", new DateTime(2011, 1, 1), DateTime.Now);//fb.GetAllPostsFromFeed("yossi.tokash");
+            //Read FBPages file from app.config
+            string FBPageList = ConfigurationManager.AppSettings["FBPageList"];
+            List<string> FBPagesToTraverse = null;
+            using (StreamReader sr = new StreamReader(FBPageList))
+            {
+                String line = sr.ReadToEnd();
+                FBPagesToTraverse = line.Split('\n').ToList<string>();
+            }
+
+            for (int i = 0; i < FBPagesToTraverse.Count; i++ )
+            {
+                FBPagesToTraverse[i] = FBPagesToTraverse[i].Trim();
+            }
+
+            int j = 0;
+
+            foreach (string feed in FBPagesToTraverse)
+            {
+                Thread t = new Thread(() => fb.GetFeedInformation(feed, new DateTime(2011, 1, 1), DateTime.Now));
+                t.Name = String.Format("{0}_{1}",feed, Guid.NewGuid());
+
+                t.Start(); 
+            }
 
             //    //if (tokenInfo != null)
             //    //{
@@ -55,5 +80,7 @@ namespace FacebookCrawler
             //    Console.WriteLine(ex.ToString());
             //}
         }
+
+        
     }
 }
