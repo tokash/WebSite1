@@ -9,6 +9,7 @@ using System.Threading;
 using Facebook;
 using FacebookCrawler.FBObjects;
 using TextFileWriter;
+using System.Diagnostics;
 
 namespace FacebookCrawler
 {
@@ -31,6 +32,8 @@ namespace FacebookCrawler
             //    client_secret = AppSecret,
             //    grant_type = "client_credentials"
             //});
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
 
             FaceBookAPI fb = new FaceBookAPI();
 
@@ -43,7 +46,7 @@ namespace FacebookCrawler
                 FBPagesToTraverse = line.Split('\n').ToList<string>();
             }
 
-            for (int i = 0; i < FBPagesToTraverse.Count; i++ )
+            for (int i = 0; i < FBPagesToTraverse.Count; i++)
             {
                 FBPagesToTraverse[i] = FBPagesToTraverse[i].Trim();
             }
@@ -52,12 +55,16 @@ namespace FacebookCrawler
 
             foreach (string feed in FBPagesToTraverse)
             {
-                Thread t = new Thread(() => fb.GetFeedInformation(feed, new DateTime(2011, 1, 1), DateTime.Now));
-                t.Name = String.Format("{0}_{1}",feed, Guid.NewGuid());
+                Thread t = new Thread(() => fb.GetFeedInformation(feed, new DateTime(2012, 1, 1), DateTime.Now));
+                t.Name = String.Format("{0}_{1}", feed, Guid.NewGuid());
 
-                t.Start(); 
+                t.Start();
             }
 
+            sw.Stop();
+
+            Console.WriteLine(sw.Elapsed);
+            Console.ReadLine();
             //    //if (tokenInfo != null)
             //    //{
             //    //    fb.PrintTokenInfo(tokenInfo);

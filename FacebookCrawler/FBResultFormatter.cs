@@ -37,7 +37,7 @@ namespace FacebookCrawler
                 {
                     if (comment.from.name != null)
                     {
-                        result += String.Format("Commenter: {0}\n", comment.from.name);
+                        result += String.Format("Commenter: {0} Wrote:{1} \n", comment.from.name, comment.message);
                     }
                 }
             }

@@ -386,11 +386,15 @@ namespace FacebookCrawler
             List<Datum> posts = new List<Datum>();
             DateTime next = iUntil;
 
+            double since = Facebook.DateTimeConvertor.ToUnixTime(iSince);
+            double until = Facebook.DateTimeConvertor.ToUnixTime(iUntil);
+
             while (next >= iSince)
             {
                 try
                 {
-                    object result = _FBClient.Get(string.Format("/{0}/feed", iUserName));
+                    string fbCommand = string.Format("/{0}/feed?since={1}&until={2}", iUserName, since, until);
+                    object result = _FBClient.Get(fbCommand);
                     System.Threading.Thread.Sleep(1000);
                     string res = result.ToString();
 
@@ -406,7 +410,10 @@ namespace FacebookCrawler
                             {
                                 if (Regex.IsMatch(post.message, iRegexPattern))
                                 {
-                                    posts.Add(post);
+                                    if (!posts.Contains(post))
+                                    {
+                                        posts.Add(post); 
+                                    }
                                 }
                                 oTotalPosts.Add(post);
                             }
@@ -445,7 +452,10 @@ namespace FacebookCrawler
                                             {
                                                 if (Regex.IsMatch(post.message, iRegexPattern))
                                                 {
-                                                    posts.Add(post);
+                                                    if (!posts.Contains(post))
+                                                    {
+                                                        posts.Add(post);
+                                                    }
                                                 }
                                                 oTotalPosts.Add(post);
                                             }
@@ -596,10 +606,10 @@ namespace FacebookCrawler
         public void GetFeedInformation(string iFeedName, DateTime iStartTime, DateTime iEndTime)
         {
             Stopwatch sw = new Stopwatch();
-            sw.Start();
 
             Console.WriteLine("{0} is waiting in line...", Thread.CurrentThread.Name);
             _Semaphore.WaitOne();
+            sw.Start();
             Console.WriteLine("{0} is Working...", Thread.CurrentThread.Name);
             List<Datum> totalPosts = new List<Datum>();
 
