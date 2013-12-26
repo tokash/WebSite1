@@ -55,7 +55,7 @@ namespace FacebookCrawler
 
             foreach (string feed in FBPagesToTraverse)
             {
-                Thread t = new Thread(() => fb.GetFeedInformation(feed, new DateTime(2012, 1, 1), DateTime.Now));
+                Thread t = new Thread(() => fb.GetFeedInformation(feed, new DateTime(2010, 1, 1), DateTime.Now));
                 t.Name = String.Format("{0}_{1}", feed, Guid.NewGuid());
 
                 t.Start();
