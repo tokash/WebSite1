@@ -64,7 +64,7 @@ namespace FacebookCrawler
             sw.Stop();
 
             Console.WriteLine(sw.Elapsed);
-            Console.ReadLine();
+            //Console.ReadLine();
             //    //if (tokenInfo != null)
             //    //{
             //    //    fb.PrintTokenInfo(tokenInfo);

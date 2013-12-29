@@ -11,6 +11,7 @@ using System.Web;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Diagnostics;
+using System.Globalization;
 
 namespace FacebookCrawler
 {
@@ -131,7 +132,8 @@ namespace FacebookCrawler
 
                     string[] tokenFileSplit = line.Split('\n');
                     facebookToken.access_token = tokenFileSplit[0];
-                    facebookToken.expires = DateTime.Parse(tokenFileSplit[1]);
+
+                    facebookToken.expires = Convert.ToDateTime(tokenFileSplit[1], new CultureInfo("en-US"));//DateTime.Parse(tokenFileSplit[1]);
 
                     if (DateTime.Now < facebookToken.expires)
                     {
