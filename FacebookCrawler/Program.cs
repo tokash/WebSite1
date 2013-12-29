@@ -24,14 +24,6 @@ namespace FacebookCrawler
 
         static void Main(string[] args)
         {
-
-            //FacebookClient fb = new FacebookClient();
-            //dynamic result = fb.Get("oauth/access_token", new
-            //{
-            //    client_id = AppID,
-            //    client_secret = AppSecret,
-            //    grant_type = "client_credentials"
-            //});
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
@@ -64,28 +56,7 @@ namespace FacebookCrawler
             sw.Stop();
 
             Console.WriteLine(sw.Elapsed);
-            //Console.ReadLine();
-            //    //if (tokenInfo != null)
-            //    //{
-            //    //    fb.PrintTokenInfo(tokenInfo);
-            //    //}
-            //}
-            //catch (Exception ex)
-            //{
-
-            //    Console.WriteLine(ex.ToString());
-            //}
-
-            //fb.AccessToken = result.access_token;
-
-            //try
-            //{
-            //    dynamic me = fb.Get("keshet.mako");
-            //}
-            //catch (Exception ex)
-            //{
-            //    Console.WriteLine(ex.ToString());
-            //}
+            //Console.ReadLine();          
         }
 
         

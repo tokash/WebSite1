@@ -15,7 +15,7 @@ using System.Globalization;
 
 namespace FacebookCrawler
 {
-    class FaceBookAPI
+    public class FaceBookAPI
     {
         private static string AppID = "630904423618987";
         private static string AppSecret = "485456384f450bde62bc9eacbfc2c316";
@@ -31,6 +31,8 @@ namespace FacebookCrawler
             _JsonSerializer.RegisterConverters(new[] { new DynamicJsonConverter() });
             _ConfigurationValues = (NameValueCollection)ConfigurationManager.GetSection("Data");
 
+            _FBResultFormatter = new FBResultFormatter(this);
+
             GetUserAccessToken();
         }
 
@@ -40,12 +42,14 @@ namespace FacebookCrawler
             _JsonSerializer.RegisterConverters(new[] { new DynamicJsonConverter() });
             _ConfigurationValues = (NameValueCollection)ConfigurationManager.GetSection("Data");
 
+            _FBResultFormatter = new FBResultFormatter(this);
+
             GetUserAccessToken();
         }
 
-
         #region Memebers
         FacebookClient _FBClient;
+        FBResultFormatter _FBResultFormatter = null;
         JavaScriptSerializer _JsonSerializer = new JavaScriptSerializer();
         string _UserAccessToken;
         string _ApplicationAccessToken;
@@ -631,10 +635,10 @@ namespace FacebookCrawler
             string results = string.Empty;
             foreach (Datum post in posts)
             {
-                results += FBResultFormatter.FormatFBPost(post, iFeedName);
+                results += _FBResultFormatter.FormatFBPost(post, iFeedName);
             }
 
-            FBResultFormatter.FormatFBStats(totalPosts.Count, posts.Count, iStartTime, iEndTime, ref results);
+            _FBResultFormatter.FormatFBStats(totalPosts.Count, posts.Count, iStartTime, iEndTime, ref results);
 
             string fileRepository = ConfigurationManager.AppSettings["ResultsLocation"];
 
@@ -643,6 +647,25 @@ namespace FacebookCrawler
             Console.WriteLine("{0} is done, total work time for thread: {1}", Thread.CurrentThread.Name, sw.Elapsed);
 
             _Semaphore.Release();
+        }
+
+        public FBBasicUser GetUserInformationByID(string iUserID)
+        {
+            FBBasicUser user = null;
+
+            try
+            {
+                object result = _FBClient.Get(string.Format("/{0}?fields=id,name,first_name,last_name,link,username,gender,locale,age_range", iUserID));
+                string res = result.ToString();
+
+                user = JsonConvert.DeserializeObject<FBBasicUser>(res);
+            }
+            catch(Exception ex)
+            {
+
+            }
+
+            return user;
         }
     }
 }

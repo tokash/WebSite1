@@ -55,6 +55,7 @@
     <Compile Include="FaceBookToken.cs" />
     <Compile Include="FBObjects\FacebookUser.cs" />
     <Compile Include="FBObjects\FacebookFeed.cs" />
+    <Compile Include="FBObjects\FBBasicUser.cs" />
     <Compile Include="FBObjects\TokenInfo.cs" />
     <Compile Include="FBResultFormatter.cs" />
     <Compile Include="Program.cs" />

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace FacebookCrawler.FBObjects
 {
     [Serializable]
-    class TokenInfo
+    public class TokenInfo
     {
         public TokenInfo()
         {

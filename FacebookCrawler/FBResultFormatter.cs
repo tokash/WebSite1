@@ -18,11 +18,19 @@ namespace FacebookCrawler
      * 7.Time span of search
     */
 
-    public class FBResultFormatter
+    class FBResultFormatter
     {
-        public static string FormatFBPost(Datum iFBPost,  string iFeedName)
+        FaceBookAPI _FBAPIWrapper;
+
+        internal FBResultFormatter(FaceBookAPI FBAPIWrapper)
+        {
+            _FBAPIWrapper = FBAPIWrapper;
+        }
+
+        public string FormatFBPost(Datum iFBPost,  string iFeedName)
         {
             string result = string.Empty;
+            List<FBBasicUser> commenters = new List<FBBasicUser>();
 
             result += "----------------------------------------------------------------------------------------------------\n";
             result += String.Format("Feed: {0}\n", iFeedName);
@@ -37,7 +45,26 @@ namespace FacebookCrawler
                 {
                     if (comment.from.name != null)
                     {
+                        FBBasicUser currUserInfo = null;
+
+                        if (commenters.Exists(i => i.id == currUserInfo.id))
+                        {
+                            currUserInfo = commenters.Find(i => i.id == currUserInfo.id);
+                        }
+                        else
+                        {
+                            currUserInfo = _FBAPIWrapper.GetUserInformationByID(comment.from.id);
+                            commenters.Add(currUserInfo);
+                        }
+
+                        string commenterLink = string.Empty;
+                        if (currUserInfo != null)
+                        {
+                            commenterLink = currUserInfo.link;
+                        }
+
                         result += String.Format("Commenter: {0} Wrote:{1} \n", comment.from.name, comment.message);
+                        result += String.Format("Commenter link: {0}\n\n", commenterLink);
                     }
                 }
             }
@@ -47,7 +74,7 @@ namespace FacebookCrawler
             return result;
         }
 
-        public static void FormatFBStats(int iTotalPosts, int iMeaningfullPosts, DateTime iStart, DateTime iEnd, ref string oResult)
+        public void FormatFBStats(int iTotalPosts, int iMeaningfullPosts, DateTime iStart, DateTime iEnd, ref string oResult)
         {
             oResult += string.Format("\nTotal posts: {0}\n", iTotalPosts);
             oResult += string.Format("Meaningfull posts out of total posts: {0}\n", iMeaningfullPosts);
