@@ -511,12 +511,12 @@ namespace FacebookCrawler
                 {
                     if (ex.Message.Contains("4")) //App level rate limit - sleep 60 minutes
                     {
-                        Console.WriteLine("Waiting 60 minutes - App level limit reached");
+                        Console.WriteLine(String.Format("{0}: Waiting 60 minutes - App level limit reached", DateTime.Now));
                         System.Threading.Thread.Sleep(3600000);
                     }
                     else if (ex.Message.Contains("17")) //User level rate limit - sleep 30 minutes
                     {
-                        Console.WriteLine("Waiting 30 minutes - User level limit reached");
+                        Console.WriteLine(String.Format("Waiting 30 minutes - User level limit reached", DateTime.Now));
                         System.Threading.Thread.Sleep(1800000);
                     }
                     else if (ex.Message.Contains("2"))
@@ -525,7 +525,7 @@ namespace FacebookCrawler
                     }
                     else
                     {
-                        Console.WriteLine(ex.ToString());
+                        Console.WriteLine(String.Format("{0}: {1}", DateTime.Now, ex.ToString()));
                         break;
                     }
                 }
@@ -613,17 +613,17 @@ namespace FacebookCrawler
         {
             Stopwatch sw = new Stopwatch();
 
-            Console.WriteLine("{0} is waiting in line...", Thread.CurrentThread.Name);
+            Console.WriteLine("{0}:{1} is waiting in line...", DateTime.Now, Thread.CurrentThread.Name);
             _Semaphore.WaitOne();
             sw.Start();
-            Console.WriteLine("{0} is Working...", Thread.CurrentThread.Name);
+            Console.WriteLine("{0}:{1} is Working...", DateTime.Now, Thread.CurrentThread.Name);
             List<Datum> totalPosts = new List<Datum>();
 
             //List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName, "[\u0591-\u05F4][\u0591-\u05F4]\"[\u0591-\u05F4] [\u0591-\u05F4]\'", iStartTime, iEndTime, ref totalPosts);
             //List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName, "", iStartTime, iEndTime, ref totalPosts);
             List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName,  " [\u0591-\u05F4]\'[^(\u0591-\u05F4)]", iStartTime, iEndTime, ref totalPosts);
 
-            
+            Console.WriteLine("{0}:{1} is gathering data for found posts...", DateTime.Now, Thread.CurrentThread.Name);
             foreach (Datum post in posts)
             {
                 if (post.comments != null)
@@ -638,13 +638,17 @@ namespace FacebookCrawler
                 results += _FBResultFormatter.FormatFBPost(post, iFeedName);
             }
 
-            _FBResultFormatter.FormatFBStats(totalPosts.Count, posts.Count, iStartTime, iEndTime, ref results);
+            DateTime lastPostDate = Convert.ToDateTime(totalPosts[totalPosts.Count - 1].created_time);
+            _FBResultFormatter.FormatFBStats(totalPosts.Count, posts.Count, iStartTime, iEndTime, lastPostDate, ref results);
+            Console.WriteLine("{0}:{1} is done gathering data for found posts...", DateTime.Now, Thread.CurrentThread.Name);
 
             string fileRepository = ConfigurationManager.AppSettings["ResultsLocation"];
 
+            Console.WriteLine("{0}:{1} is Writing data to file...", DateTime.Now, Thread.CurrentThread.Name);
             TextFileWriter.TextFileWriter.WriteTextFile(string.Format("{0}{1}.txt",fileRepository, iFeedName), results);
+            Console.WriteLine("{0}:{1} is done Writing data to file...", DateTime.Now, Thread.CurrentThread.Name);
             sw.Stop();
-            Console.WriteLine("{0} is done, total work time for thread: {1}", Thread.CurrentThread.Name, sw.Elapsed);
+            Console.WriteLine("{0}:{1} is DONE, total work time for thread: {2}", DateTime.Now, Thread.CurrentThread.Name, sw.Elapsed);
 
             _Semaphore.Release();
         }
@@ -655,14 +659,33 @@ namespace FacebookCrawler
 
             try
             {
-                object result = _FBClient.Get(string.Format("/{0}?fields=id,name,first_name,last_name,link,username,gender,locale,age_range", iUserID));
+                string FBCmd = string.Format("/{0}?fields=id,name,link", iUserID);
+                object result = _FBClient.Get(FBCmd);
+                System.Threading.Thread.Sleep(2000);
                 string res = result.ToString();
 
                 user = JsonConvert.DeserializeObject<FBBasicUser>(res);
             }
             catch(Exception ex)
             {
-
+                if (ex.Message.Contains("4")) //App level rate limit - sleep 60 minutes
+                {
+                    Console.WriteLine(String.Format("{0}: Waiting 60 minutes - App level limit reached", DateTime.Now));
+                    System.Threading.Thread.Sleep(3600000);
+                }
+                else if (ex.Message.Contains("17")) //User level rate limit - sleep 30 minutes
+                {
+                    Console.WriteLine(String.Format("Waiting 30 minutes - User level limit reached", DateTime.Now));
+                    System.Threading.Thread.Sleep(1800000);
+                }
+                else if (ex.Message.Contains("2"))
+                {
+                    System.Threading.Thread.Sleep(2000);
+                }
+                else
+                {
+                    Console.WriteLine(String.Format("{0}: {1}", DateTime.Now, ex.ToString()));
+                }
             }
 
             return user;

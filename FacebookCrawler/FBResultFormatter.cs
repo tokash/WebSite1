@@ -27,7 +27,7 @@ namespace FacebookCrawler
             _FBAPIWrapper = FBAPIWrapper;
         }
 
-        public string FormatFBPost(Datum iFBPost,  string iFeedName)
+        public string FormatFBPost(Datum iFBPost, string iFeedName)
         {
             string result = string.Empty;
             List<FBBasicUser> commenters = new List<FBBasicUser>();
@@ -47,9 +47,9 @@ namespace FacebookCrawler
                     {
                         FBBasicUser currUserInfo = null;
 
-                        if (commenters.Exists(i => i.id == currUserInfo.id))
+                        if (commenters.Exists(i => i.id == comment.from.id))
                         {
-                            currUserInfo = commenters.Find(i => i.id == currUserInfo.id);
+                            currUserInfo = commenters.Find(i => i.id == comment.from.id);
                         }
                         else
                         {
@@ -74,13 +74,14 @@ namespace FacebookCrawler
             return result;
         }
 
-        public void FormatFBStats(int iTotalPosts, int iMeaningfullPosts, DateTime iStart, DateTime iEnd, ref string oResult)
+        public void FormatFBStats(int iTotalPosts, int iMeaningfullPosts, DateTime iStart, DateTime iEnd, DateTime iLastPost, ref string oResult)
         {
             oResult += string.Format("\nTotal posts: {0}\n", iTotalPosts);
             oResult += string.Format("Meaningfull posts out of total posts: {0}\n", iMeaningfullPosts);
 
             TimeSpan informationTime = (iEnd - iStart);
             oResult += string.Format("Information taken from {0} to {1}, all in total: {2} days, {3} hours, {4} minutes, {5} seconds \n", iStart, iEnd, informationTime.Days, informationTime.Hours, informationTime.Minutes, informationTime.Seconds);
+            oResult += string.Format("Last post date: {0}\n", iLastPost);
         }
     }
 }
