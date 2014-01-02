@@ -54,17 +54,22 @@ namespace FacebookCrawler
                         else
                         {
                             currUserInfo = _FBAPIWrapper.GetUserInformationByID(comment.from.id);
-                            commenters.Add(currUserInfo);
+
+                            if (currUserInfo != null)
+                            {
+                                commenters.Add(currUserInfo);
+                            }
                         }
+
+                        result += String.Format("Commenter: {0} Wrote:{1} \n", comment.from.name, comment.message);
 
                         string commenterLink = string.Empty;
                         if (currUserInfo != null)
                         {
                             commenterLink = currUserInfo.link;
+                            result += String.Format("Commenter link: {0}\n\n", commenterLink);
                         }
-
-                        result += String.Format("Commenter: {0} Wrote:{1} \n", comment.from.name, comment.message);
-                        result += String.Format("Commenter link: {0}\n\n", commenterLink);
+                        
                     }
                 }
             }

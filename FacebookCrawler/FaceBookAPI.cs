@@ -534,6 +534,159 @@ namespace FacebookCrawler
             return posts;
         }
 
+        public List<Datum> GetPostsMatchingRegexPattern(string iUserName, string iRegexPattern, DateTime iSince, DateTime iUntil, ref int oTotalPosts, ref DateTime oLastPostDate)
+        {
+            List<Datum> posts = new List<Datum>();
+            Datum lastPost = null;
+            DateTime next = iUntil;
+            int numTotalPosts = 0;
+
+            double since = Facebook.DateTimeConvertor.ToUnixTime(iSince);
+            double until = Facebook.DateTimeConvertor.ToUnixTime(iUntil);
+
+            while (next >= iSince)
+            {
+                try
+                {
+                    string fbCommand = string.Format("/{0}/feed?since={1}&until={2}", iUserName, since, until);
+                    object result = _FBClient.Get(fbCommand);
+                    System.Threading.Thread.Sleep(1000);
+                    string res = result.ToString();
+
+                    FacebookFeed facebookFeed = JsonConvert.DeserializeObject<FacebookFeed>(res);
+                    lastPost = facebookFeed.data[facebookFeed.data.Count - 1];
+                    numTotalPosts += facebookFeed.data.Count;
+
+                    foreach (Datum post in facebookFeed.data)
+                    {
+                        DateTime createdTime = DateTime.Parse(post.created_time);
+
+                        if (createdTime >= iSince && createdTime <= iUntil)
+                        {
+                            if (post.message != null)
+                            {
+                                if (Regex.IsMatch(post.message, iRegexPattern))
+                                {
+                                    if (!posts.Contains(post))
+                                    {
+                                        posts.Add(post);
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+
+
+                    if (facebookFeed.paging != null)
+                    {
+                        string nextCursor = HttpUtility.ParseQueryString(facebookFeed.paging.next).Get("until");
+                        next = Facebook.DateTimeConvertor.FromUnixTime(nextCursor);
+
+                        if (next >= iSince)
+                        {
+                            while (facebookFeed.paging != null)
+                            {
+                                if (facebookFeed.paging.next != string.Empty)
+                                {
+                                    result = _FBClient.Get(facebookFeed.paging.next);
+                                    System.Threading.Thread.Sleep(1000);
+                                    res = result.ToString();
+                                    facebookFeed = JsonConvert.DeserializeObject<FacebookFeed>(res);
+                                    lastPost = facebookFeed.data[facebookFeed.data.Count - 1];
+                                    numTotalPosts += facebookFeed.data.Count;
+
+                                    foreach (Datum post in facebookFeed.data)
+                                    {
+                                        DateTime createdTime = DateTime.Parse(post.created_time);
+
+                                        if (createdTime >= iSince && createdTime <= iUntil)
+                                        {
+                                            if (post.message != null)
+                                            {
+                                                if (Regex.IsMatch(post.message, iRegexPattern))
+                                                {
+                                                    if (!posts.Contains(post))
+                                                    {
+                                                        posts.Add(post);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            break;
+                                        }
+                                    }
+
+                                    if (facebookFeed.paging != null)
+                                    {
+                                        //string param1 = HttpUtility.ParseQueryString(myUri.Query).Get("param1");
+                                        nextCursor = HttpUtility.ParseQueryString(facebookFeed.paging.next).Get("until");
+                                        next = Facebook.DateTimeConvertor.FromUnixTime(nextCursor);
+
+                                        if (next < iSince)
+                                        {
+                                            break;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        break; // no more posts
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            break; // posts from next batch are older than we asked
+                        }
+
+                    }
+                    else
+                    {
+                        break; // no more posts
+                    }
+
+                    if (facebookFeed.paging == null)
+                    {
+                        break;
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    if (ex.Message.Contains("4")) //App level rate limit - sleep 60 minutes
+                    {
+                        Console.WriteLine(String.Format("{0}: Waiting 60 minutes - App level limit reached", DateTime.Now));
+                        System.Threading.Thread.Sleep(3600000);
+                    }
+                    else if (ex.Message.Contains("17")) //User level rate limit - sleep 30 minutes
+                    {
+                        Console.WriteLine(String.Format("Waiting 30 minutes - User level limit reached", DateTime.Now));
+                        System.Threading.Thread.Sleep(1800000);
+                    }
+                    else if (ex.Message.Contains("2"))
+                    {
+                        System.Threading.Thread.Sleep(2000);
+                    }
+                    else
+                    {
+                        Console.WriteLine(String.Format("{0}: {1}", DateTime.Now, ex.ToString()));
+                        break;
+                    }
+                }
+            }
+
+            oLastPostDate = Convert.ToDateTime(lastPost.created_time);
+            oTotalPosts = numTotalPosts;
+
+            return posts;
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -617,11 +770,14 @@ namespace FacebookCrawler
             _Semaphore.WaitOne();
             sw.Start();
             Console.WriteLine("{0}:{1} is Working...", DateTime.Now, Thread.CurrentThread.Name);
-            List<Datum> totalPosts = new List<Datum>();
+            //List<Datum> totalPosts = new List<Datum>();
+            int totalPosts = 0;
+            DateTime lastPostDate = DateTime.Now;
 
             //List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName, "[\u0591-\u05F4][\u0591-\u05F4]\"[\u0591-\u05F4] [\u0591-\u05F4]\'", iStartTime, iEndTime, ref totalPosts);
             //List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName, "", iStartTime, iEndTime, ref totalPosts);
-            List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName,  " [\u0591-\u05F4]\'[^(\u0591-\u05F4)]", iStartTime, iEndTime, ref totalPosts);
+            //List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName,  " [\u0591-\u05F4]\'[^(\u0591-\u05F4)]", iStartTime, iEndTime, ref totalPosts);
+            List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName, " [\u0591-\u05F4]\'[^(\u0591-\u05F4)]", iStartTime, iEndTime, ref totalPosts, ref lastPostDate);
 
             Console.WriteLine("{0}:{1} is gathering data for found posts...", DateTime.Now, Thread.CurrentThread.Name);
             foreach (Datum post in posts)
@@ -638,8 +794,9 @@ namespace FacebookCrawler
                 results += _FBResultFormatter.FormatFBPost(post, iFeedName);
             }
 
-            DateTime lastPostDate = Convert.ToDateTime(totalPosts[totalPosts.Count - 1].created_time);
-            _FBResultFormatter.FormatFBStats(totalPosts.Count, posts.Count, iStartTime, iEndTime, lastPostDate, ref results);
+            //DateTime lastPostDate = Convert.ToDateTime(totalPosts[totalPosts.Count - 1].created_time);
+            //_FBResultFormatter.FormatFBStats(totalPosts.Count, posts.Count, iStartTime, iEndTime, lastPostDate, ref results);
+            _FBResultFormatter.FormatFBStats(totalPosts, posts.Count, iStartTime, iEndTime, lastPostDate, ref results);
             Console.WriteLine("{0}:{1} is done gathering data for found posts...", DateTime.Now, Thread.CurrentThread.Name);
 
             string fileRepository = ConfigurationManager.AppSettings["ResultsLocation"];
@@ -661,7 +818,7 @@ namespace FacebookCrawler
             {
                 string FBCmd = string.Format("/{0}?fields=id,name,link", iUserID);
                 object result = _FBClient.Get(FBCmd);
-                System.Threading.Thread.Sleep(2000);
+                System.Threading.Thread.Sleep(1000);
                 string res = result.ToString();
 
                 user = JsonConvert.DeserializeObject<FBBasicUser>(res);
