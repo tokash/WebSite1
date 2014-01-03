@@ -32,7 +32,10 @@ namespace FacebookCrawler
             //Read FBPages file from app.config
             string FBPageList = ConfigurationManager.AppSettings["FBPageList"];
             List<string> FBPagesToTraverse = null;
-            using (StreamReader sr = new StreamReader(FBPageList))
+
+            string FBPagePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FBPageList);
+            Console.WriteLine(string.Format("Current running directory: {0}", FBPagePath));
+            using (StreamReader sr = new StreamReader(FBPagePath))
             {
                 String line = sr.ReadToEnd();
                 FBPagesToTraverse = line.Split('\n').ToList<string>();

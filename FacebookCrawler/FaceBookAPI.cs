@@ -30,6 +30,12 @@ namespace FacebookCrawler
             _FBClient = new FacebookClient();
             _JsonSerializer.RegisterConverters(new[] { new DynamicJsonConverter() });
             _ConfigurationValues = (NameValueCollection)ConfigurationManager.GetSection("Data");
+            NameValueCollection searchPatterns = (NameValueCollection)ConfigurationManager.GetSection("SearchPatterns");
+
+            foreach (string searchPattern in searchPatterns)
+            {
+                _SearchPatterns.Add(searchPatterns[searchPattern]);
+            }
 
             _FBResultFormatter = new FBResultFormatter(this);
 
@@ -54,6 +60,7 @@ namespace FacebookCrawler
         string _UserAccessToken;
         string _ApplicationAccessToken;
         NameValueCollection _ConfigurationValues;
+        List<String> _SearchPatterns = new List<string>();
         static Semaphore _Semaphore = new Semaphore(3, 3);
 
         public string AccessToken { get { return _FBClient.AccessToken; } } 
@@ -387,7 +394,7 @@ namespace FacebookCrawler
             return posts;
         }
 
-        public List<Datum> GetPostsMatchingRegexPattern(string iUserName, string iRegexPattern, DateTime iSince, DateTime iUntil, ref List<Datum> oTotalPosts)
+        public List<Datum> GetPostsMatchingRegexPattern(string iUserName, List<string> iRegexPattern, DateTime iSince, DateTime iUntil, ref List<Datum> oTotalPosts)
         {
             List<Datum> posts = new List<Datum>();
             DateTime next = iUntil;
@@ -414,7 +421,7 @@ namespace FacebookCrawler
                         {
                             if (post.message != null)
                             {
-                                if (Regex.IsMatch(post.message, iRegexPattern))
+                                if (IsPatternListMatch(post.message, iRegexPattern))
                                 {
                                     if (!posts.Contains(post))
                                     {
@@ -456,7 +463,7 @@ namespace FacebookCrawler
                                         {
                                             if (post.message != null)
                                             {
-                                                if (Regex.IsMatch(post.message, iRegexPattern))
+                                                if (IsPatternListMatch(post.message, iRegexPattern))
                                                 {
                                                     if (!posts.Contains(post))
                                                     {
@@ -534,7 +541,7 @@ namespace FacebookCrawler
             return posts;
         }
 
-        public List<Datum> GetPostsMatchingRegexPattern(string iUserName, string iRegexPattern, DateTime iSince, DateTime iUntil, ref int oTotalPosts, ref DateTime oLastPostDate)
+        public List<Datum> GetPostsMatchingRegexPattern(string iUserName, List<string> iRegexPattern, DateTime iSince, DateTime iUntil, ref int oTotalPosts, ref DateTime oLastPostDate)
         {
             List<Datum> posts = new List<Datum>();
             Datum lastPost = null;
@@ -554,7 +561,10 @@ namespace FacebookCrawler
                     string res = result.ToString();
 
                     FacebookFeed facebookFeed = JsonConvert.DeserializeObject<FacebookFeed>(res);
-                    lastPost = facebookFeed.data[facebookFeed.data.Count - 1];
+                    if (facebookFeed.data.Count > 0)
+                    {
+                        lastPost = facebookFeed.data[facebookFeed.data.Count - 1]; 
+                    }
                     numTotalPosts += facebookFeed.data.Count;
 
                     foreach (Datum post in facebookFeed.data)
@@ -565,13 +575,21 @@ namespace FacebookCrawler
                         {
                             if (post.message != null)
                             {
-                                if (Regex.IsMatch(post.message, iRegexPattern))
+                                if (IsPatternListMatch(post.message, iRegexPattern))
                                 {
                                     if (!posts.Contains(post))
                                     {
                                         posts.Add(post);
                                     }
                                 }
+
+                                //if (Regex.IsMatch(post.message, iRegexPattern))
+                                //{
+                                //    if (!posts.Contains(post))
+                                //    {
+                                //        posts.Add(post);
+                                //    }
+                                //}
                             }
                         }
                         else
@@ -596,7 +614,11 @@ namespace FacebookCrawler
                                     System.Threading.Thread.Sleep(1000);
                                     res = result.ToString();
                                     facebookFeed = JsonConvert.DeserializeObject<FacebookFeed>(res);
-                                    lastPost = facebookFeed.data[facebookFeed.data.Count - 1];
+
+                                    if (facebookFeed.data.Count > 0)
+                                    {
+                                        lastPost = facebookFeed.data[facebookFeed.data.Count - 1]; 
+                                    }
                                     numTotalPosts += facebookFeed.data.Count;
 
                                     foreach (Datum post in facebookFeed.data)
@@ -607,7 +629,7 @@ namespace FacebookCrawler
                                         {
                                             if (post.message != null)
                                             {
-                                                if (Regex.IsMatch(post.message, iRegexPattern))
+                                                if (IsPatternListMatch(post.message, iRegexPattern))
                                                 {
                                                     if (!posts.Contains(post))
                                                     {
@@ -777,7 +799,9 @@ namespace FacebookCrawler
             //List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName, "[\u0591-\u05F4][\u0591-\u05F4]\"[\u0591-\u05F4] [\u0591-\u05F4]\'", iStartTime, iEndTime, ref totalPosts);
             //List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName, "", iStartTime, iEndTime, ref totalPosts);
             //List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName,  " [\u0591-\u05F4]\'[^(\u0591-\u05F4)]", iStartTime, iEndTime, ref totalPosts);
-            List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName, " [\u0591-\u05F4]\'[^(\u0591-\u05F4)]", iStartTime, iEndTime, ref totalPosts, ref lastPostDate);
+            //List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName, " [\u0591-\u05F4]\'[^(\u0591-\u05F4)]", iStartTime, iEndTime, ref totalPosts, ref lastPostDate);
+
+            List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName, _SearchPatterns, iStartTime, iEndTime, ref totalPosts, ref lastPostDate);
 
             Console.WriteLine("{0}:{1} is gathering data for found posts...", DateTime.Now, Thread.CurrentThread.Name);
             foreach (Datum post in posts)
@@ -841,11 +865,27 @@ namespace FacebookCrawler
                 }
                 else
                 {
-                    Console.WriteLine(String.Format("{0}: {1}", DateTime.Now, ex.ToString()));
+                    Console.WriteLine(String.Format("GetUserInformationByID: {0}: {1}", DateTime.Now, ex.ToString()));
                 }
             }
 
             return user;
+        }
+
+        private bool IsPatternListMatch(string iMessage, List<string> iSearchPatterns)
+        {
+            bool retVal = false;
+
+            foreach (string searchPattern in iSearchPatterns)
+            {
+                if (Regex.IsMatch(iMessage, searchPattern))
+                {
+                    retVal = true;
+                    break;
+                }
+            }
+
+            return retVal;
         }
     }
 }
