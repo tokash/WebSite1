@@ -61,6 +61,7 @@ namespace FacebookCrawler
                             }
                         }
 
+                        result += String.Format("Comment date: {0}\n", comment.created_time);
                         result += String.Format("Commenter: {0} Wrote:{1} \n", comment.from.name, comment.message);
 
                         string commenterLink = string.Empty;
