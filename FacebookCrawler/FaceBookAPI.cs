@@ -715,62 +715,59 @@ namespace FacebookCrawler
             Datum lastPost = null;
             DateTime next = iUntil;
             int numTotalPosts = 0;
+            bool noNewPosts = false;
 
             double since = Facebook.DateTimeConvertor.ToUnixTime(iSince);
             double until = Facebook.DateTimeConvertor.ToUnixTime(iUntil);
 
-            while (next >= iSince)
+            string fbCommand = string.Format("/{0}/feed?since={1}&until={2}", iUserName, since, until);
+            object result = _FBClient.Get(fbCommand);
+            System.Threading.Thread.Sleep(1000);
+            string res = result.ToString();
+
+            FacebookFeed facebookFeed = JsonConvert.DeserializeObject<FacebookFeed>(res);
+            if (facebookFeed.data.Count > 0)
+            {
+                lastPost = facebookFeed.data[facebookFeed.data.Count - 1];
+            }
+            numTotalPosts += facebookFeed.data.Count;
+
+            foreach (Datum post in facebookFeed.data)
+            {
+                DateTime createdTime = DateTime.Parse(post.created_time);
+
+                if (createdTime >= iSince && createdTime <= iUntil)
+                {
+                    if (post.message != null)
+                    {
+                        if (Regex.IsMatch(post.message, iRegexPattern))
+                        {
+                            if (!posts.Contains(post))
+                            {
+                                posts.Add(post);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            while (next >= iSince && noNewPosts == false)
             {
                 try
                 {
-                    string fbCommand = string.Format("/{0}/feed?since={1}&until={2}", iUserName, since, until);
-                    object result = _FBClient.Get(fbCommand);
-                    System.Threading.Thread.Sleep(1000);
-                    string res = result.ToString();
-
-                    FacebookFeed facebookFeed = JsonConvert.DeserializeObject<FacebookFeed>(res);
-                    if (facebookFeed.data.Count > 0)
-                    {
-                        lastPost = facebookFeed.data[facebookFeed.data.Count - 1];
-                    }
-                    numTotalPosts += facebookFeed.data.Count;
-
-                    foreach (Datum post in facebookFeed.data)
-                    {
-                        DateTime createdTime = DateTime.Parse(post.created_time);
-
-                        if (createdTime >= iSince && createdTime <= iUntil)
-                        {
-                            if (post.message != null)
-                            {
-                                if (Regex.IsMatch(post.message, iRegexPattern))
-                                {
-                                    if (!posts.Contains(post))
-                                    {
-                                        posts.Add(post);
-                                    }
-                                }
-
-                                //if (Regex.IsMatch(post.message, iRegexPattern))
-                                //{
-                                //    if (!posts.Contains(post))
-                                //    {
-                                //        posts.Add(post);
-                                //    }
-                                //}
-                            }
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-
-
                     if (facebookFeed.paging != null)
                     {
                         string nextCursor = HttpUtility.ParseQueryString(facebookFeed.paging.next).Get("until");
                         next = Facebook.DateTimeConvertor.FromUnixTime(nextCursor);
+
+                        using (StreamWriter sw = new StreamWriter("Log.txt", true))
+                        {
+                            sw.WriteLine(string.Format("{0}: next post is from the {1}", DateTime.Now, next));
+                        }
 
                         if (next >= iSince)
                         {
@@ -785,7 +782,17 @@ namespace FacebookCrawler
 
                                     if (facebookFeed.data.Count > 0)
                                     {
-                                        lastPost = facebookFeed.data[facebookFeed.data.Count - 1];
+                                        DateTime lastPostInCurrentFeedPageCreationTime = DateTime.Parse(facebookFeed.data[facebookFeed.data.Count - 1].created_time);
+                                        DateTime currLastPostCreationTime = DateTime.Parse(lastPost.created_time);
+                                        if (lastPostInCurrentFeedPageCreationTime < currLastPostCreationTime)
+                                        {
+                                            lastPost = facebookFeed.data[facebookFeed.data.Count - 1];
+                                        }
+                                        else
+                                        {
+                                            noNewPosts = true;
+                                            break; //posts arriving from facebook are later than current last post (last post in current feed page is newer than last post -> not logical)
+                                        }
                                     }
                                     numTotalPosts += facebookFeed.data.Count;
 
@@ -818,6 +825,11 @@ namespace FacebookCrawler
                                         nextCursor = HttpUtility.ParseQueryString(facebookFeed.paging.next).Get("until");
                                         next = Facebook.DateTimeConvertor.FromUnixTime(nextCursor);
 
+                                        using (StreamWriter sw = new StreamWriter("Log.txt", true))
+                                        {
+                                            sw.WriteLine(string.Format("{0}: next post is from the {1}", DateTime.Now, next));
+                                        }
+
                                         if (next < iSince)
                                         {
                                             break;
@@ -828,7 +840,11 @@ namespace FacebookCrawler
                                         break; // no more posts
                                     }
                                 }
+
+                                Console.WriteLine(String.Format("{0}: Total posts processed: {1}\nNumber of Meaningfull posts found: {2}" , DateTime.Now, numTotalPosts, posts.Count ));
                             }
+
+                            Console.WriteLine(String.Format("{0}: While loop exited...", DateTime.Now));
                         }
                         else
                         {
