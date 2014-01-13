@@ -62,6 +62,7 @@ namespace FacebookCrawler
         NameValueCollection _ConfigurationValues;
         List<String> _SearchPatterns = new List<string>();
         static Semaphore _Semaphore = new Semaphore(3, 3);
+        DateTime _LastExceptionTime = DateTime.Now;
 
         public string AccessToken { get { return _FBClient.AccessToken; } } 
         #endregion
@@ -878,6 +879,16 @@ namespace FacebookCrawler
                     else if (ex.Message.Contains("2"))
                     {
                         System.Threading.Thread.Sleep(2000);
+                        DateTime exceptionTime = DateTime.Now;
+
+                        if (exceptionTime - _LastExceptionTime < new TimeSpan(0,0,5))
+                        {
+                            break; //there is a problem with the pagination process 
+                        }
+                        else
+                        {
+                            _LastExceptionTime = exceptionTime;
+                        }
                     }
                     else
                     {
