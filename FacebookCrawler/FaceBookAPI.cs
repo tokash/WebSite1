@@ -881,7 +881,7 @@ namespace FacebookCrawler
                         System.Threading.Thread.Sleep(2000);
                         DateTime exceptionTime = DateTime.Now;
 
-                        if (exceptionTime - _LastExceptionTime < new TimeSpan(0,0,5))
+                        if (exceptionTime - _LastExceptionTime < new TimeSpan(0,0,10))
                         {
                             break; //there is a problem with the pagination process 
                         }
@@ -898,7 +898,10 @@ namespace FacebookCrawler
                 }
             }
 
-            oLastPostDate = Convert.ToDateTime(lastPost.created_time);
+            if (lastPost != null)
+            {
+                oLastPostDate = Convert.ToDateTime(lastPost.created_time); 
+            }
             oTotalPosts = numTotalPosts;
 
             return posts;
