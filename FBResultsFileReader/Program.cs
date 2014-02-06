@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,7 +13,13 @@ namespace FBResultsFileReader
         {
             FBResultsFileReader fbReader = new FBResultsFileReader();
 
-            fbReader.ConvertToCSV("press release_graph pilot_12.01.14.txt");
+            string directoryPath = @"D:\Dropbox\BIU Group\Qualitative research\c.s data for graphs";
+            string[] files = Directory.GetFiles(directoryPath);
+
+            foreach (var filename in files)
+            {
+                fbReader.ConvertToCSV(filename);
+            }
         }
     }
 }

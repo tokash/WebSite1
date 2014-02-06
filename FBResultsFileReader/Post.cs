@@ -19,6 +19,7 @@ namespace FBResultsFileReader
         public string CommentMessage { get; set; }
         public string CommenterLink { get; set; }
         public DateTime CommentDate { get; set; }
-        public bool IsMeaningfull { get; set; }
+        public string Taxonomy { get; set; }
+        //public bool IsMeaningfull { get; set; }
     }
 }

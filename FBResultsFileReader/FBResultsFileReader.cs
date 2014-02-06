@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace FBResultsFileReader
 {
@@ -41,11 +43,19 @@ namespace FBResultsFileReader
                         }
                         else if (_RawFileData[i].Contains("Created at: "))
                         {
-                            createdAt = DateTime.Parse(_RawFileData[i].Substring(12));
+                            if (_RawFileData[i].Length >= 30)
+                            {
+                                createdAt = DateTime.Parse(_RawFileData[i].Substring(12));
+                            }
+                            else
+                            {
+                                createdAt = DateTime.MinValue;
+                            }
                         }
                         else if (_RawFileData[i].Contains("Commenters:"))
                         {
                             List<Comment> comments = ParsePostComments(ref i);
+                            i--;
                             _Posts.Add(new Post()
                                                 {
                                                     Feed = feed,
@@ -80,24 +90,37 @@ namespace FBResultsFileReader
             string commenter = string.Empty;
             string comment = string.Empty;
             string commenterLink = string.Empty;
-            DateTime commentDate = DateTime.Now;
+            DateTime commentDate = DateTime.MinValue;
+            string data = string.Empty;
             bool isMeaningfull = false;
 
-            while (!_RawFileData[iLineIndex].Contains("---------------------------------------"))
+            while (iLineIndex < _RawFileData.Count && !_RawFileData[iLineIndex].StartsWith("Feed"))
             {
                 int startIdx = 0;
                 if (_RawFileData[iLineIndex].Contains("Commenter: "))
                 {
                     startIdx = 11;
-                    if (_RawFileData[iLineIndex].StartsWith("##"))
+                    if (_RawFileData[iLineIndex].StartsWith("#"))
                     {
-                        isMeaningfull = true;
-                        startIdx = 13;
+                        data = ExtractDataBetweenCharacters(_RawFileData[iLineIndex], "#");
+                        //isMeaningfull = true;
+                        //startIdx = 13;
+                        startIdx = 13 + data.Length;
                     }
 
-                    commenter = _RawFileData[iLineIndex].Substring(startIdx, _RawFileData[iLineIndex].IndexOf(" Wrote:") - startIdx);
-                    string[] split = _RawFileData[iLineIndex].Split(new string[] { "Wrote:" }, StringSplitOptions.None);
-                    comment = split[1];
+                    try
+                    {
+                        commenter = _RawFileData[iLineIndex].Substring(startIdx, _RawFileData[iLineIndex].IndexOf(" Wrote :") - startIdx);
+                        string[] split = _RawFileData[iLineIndex].Split(new string[] { " Wrote :" }, StringSplitOptions.None);
+                        comment = split[1];
+                    }
+                    catch (Exception)
+                    {
+                        commenter = _RawFileData[iLineIndex].Substring(startIdx, _RawFileData[iLineIndex].IndexOf(" Wrote:") - startIdx);
+                        string[] split = _RawFileData[iLineIndex].Split(new string[] { " Wrote:" }, StringSplitOptions.None);
+                        comment = split[1];
+                    }
+                    
 
                     
                 }
@@ -107,9 +130,18 @@ namespace FBResultsFileReader
                 }
                 else if (_RawFileData[iLineIndex].Contains("Comment date: "))
                 {
-                    commentDate = DateTime.Parse(_RawFileData[iLineIndex].Substring(14));
+                    startIdx = 14;
+                    if (_RawFileData[iLineIndex].StartsWith("#"))
+                    {
+                        //isMeaningfull = true;
+                        //startIdx = 16;
+                        data = ExtractDataBetweenCharacters(_RawFileData[iLineIndex], "#");
+                        startIdx = 16 + data.Length;
+                    }
+
+                    commentDate = DateTime.Parse(_RawFileData[iLineIndex].Substring(startIdx));
                 }
-                else if (_RawFileData[iLineIndex] == string.Empty)
+                else if (/*_RawFileData[iLineIndex] == string.Empty &&*/ comment != string.Empty && commentDate != DateTime.MinValue)
                 {
                     if (commenter != string.Empty && commenterLink != string.Empty)
                     {
@@ -117,12 +149,15 @@ namespace FBResultsFileReader
                                                      Commenter = commenter,
                                                      CommentMessage = comment,
                                                      CommenterLink = commenterLink,
-                                                     IsMeaningfull = isMeaningfull
+                                                     Taxonomy = data
+                                                     //IsMeaningfull = isMeaningfull
                         });
                         commenter = string.Empty;
                         commenterLink = string.Empty;
-                        commentDate = DateTime.Now;
+                        commentDate = DateTime.MinValue;
+                        comment = string.Empty;
                         isMeaningfull = false;
+                        data = string.Empty;
                     }
                 }
 
@@ -136,7 +171,35 @@ namespace FBResultsFileReader
         {
             try
             {
-                _RawFileData.AddRange(File.ReadAllLines(iFilepath).ToList());
+                //_RawFileData.AddRange(File.ReadAllLines(iFilepath).ToList());
+                string temp = new DocxToText(iFilepath).ExtractText();
+                string[] lines = temp.Split('\t', '\n');
+                List<string> listLines = new List<string>();
+
+                foreach (var line in lines)
+                {
+                    if (line != string.Empty && line != "\r")
+                    {
+                        if (listLines.Count > 0)
+                        {
+                            if (listLines[listLines.Count - 1].StartsWith("Commenter link"))
+                            {
+                                listLines.Add("\n");
+                                listLines.Add(line.Replace("\r", string.Empty));
+                            }
+                            else
+                            {
+                                listLines.Add(line.Replace("\r", string.Empty));
+                            }
+                        }
+                        else
+                        {
+                            listLines.Add(line.Replace("\r", string.Empty));
+                        }
+                    }
+                }
+                listLines.Add("\n");
+                _RawFileData.AddRange(listLines);
             }
             catch (Exception)
             {
@@ -150,6 +213,8 @@ namespace FBResultsFileReader
             {
                 ParseFile(iFilePath);
                 WriteCSVFile(iFilePath);
+                _RawFileData.Clear();
+                _Posts.Clear();
             }
             catch (Exception)
             {
@@ -166,7 +231,7 @@ namespace FBResultsFileReader
                 foreach (Post post in _Posts)
                 {
                     string csvfilename = string.Format("{0}.{1}.{2}.csv", filename, post.Feed, post.CreatedAt.ToString("dd.MM.yyyy.hh.mm.ss"));
-                    using (StreamWriter writer = new StreamWriter(csvfilename, true))
+                    using (StreamWriter writer = new StreamWriter(csvfilename.Replace("\r", string.Empty), true))
                     {
                     
                         string line = string.Empty;
@@ -178,7 +243,7 @@ namespace FBResultsFileReader
                         {
                             foreach (Comment comment in post.Comments)
                             {
-                                line = string.Format("{0},{1},{2},{3},{4}", comment.Commenter, comment.CommentMessage.Replace(",", " "), comment.CommenterLink, comment.CommentDate, comment.IsMeaningfull);
+                                line = string.Format("{0},{1},{2},{3},{4}", comment.Commenter, comment.CommentMessage.Replace(",", " "), comment.CommenterLink, comment.CommentDate, comment.Taxonomy);
                                 writer.WriteLine(line);
                             }
                         }                        
@@ -193,6 +258,21 @@ namespace FBResultsFileReader
             
         }
 
+        private string ExtractDataBetweenCharacters(string iOriginalString, string iMarker)
+        {
+            string data = string.Empty;
 
+            //locate openning marker location
+            //get substring from that location to end of original string
+            //locate closing marker location
+            //get substring from position 0 to closing marker location
+
+            int openningMarker = iOriginalString.IndexOf(iMarker);
+            string intermediate = iOriginalString.Substring(openningMarker + 1);
+            int closingMarker = intermediate.IndexOf(iMarker) + openningMarker;
+            data = intermediate.Substring(openningMarker, closingMarker - openningMarker);
+
+            return data;
+        }
     }
 }
