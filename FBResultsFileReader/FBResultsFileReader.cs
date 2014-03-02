@@ -145,6 +145,11 @@ namespace FBResultsFileReader
                 {
                     if (commenter != string.Empty && commenterLink != string.Empty)
                     {
+                        if(data == string.Empty)
+                        {
+                            data = "0";
+                        }
+
                         comments.Add(new Comment() { CommentDate = commentDate,
                                                      Commenter = commenter,
                                                      CommentMessage = comment,

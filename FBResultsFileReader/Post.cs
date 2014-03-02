@@ -21,5 +21,10 @@ namespace FBResultsFileReader
         public DateTime CommentDate { get; set; }
         public string Taxonomy { get; set; }
         //public bool IsMeaningfull { get; set; }
+
+        public Comment()
+        {
+            Taxonomy = "0";
+        }
     }
 }

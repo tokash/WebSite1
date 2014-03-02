@@ -13,7 +13,7 @@ namespace FBResultsFileReader
         {
             FBResultsFileReader fbReader = new FBResultsFileReader();
 
-            string directoryPath = @"D:\Dropbox\BIU Group\Qualitative research\c.s data for graphs";
+            string directoryPath = @"D:\Dropbox\BIU Group\Qualitative research\Case Study for Graphs\c.s data_other relevant";
             string[] files = Directory.GetFiles(directoryPath);
 
             foreach (var filename in files)
