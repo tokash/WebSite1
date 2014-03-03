@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TextFileWriter", "TextFileW
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FBResultsFileReader", "FBResultsFileReader\FBResultsFileReader.csproj", "{6B12DA50-4C8C-4A91-ADD4-230F4BB0724D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FBCommentsStatistics", "FBCommentsStatistics\FBCommentsStatistics.csproj", "{F9D938B9-C4C6-437F-837C-C1558813FADA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -25,6 +27,10 @@ Global
 		{6B12DA50-4C8C-4A91-ADD4-230F4BB0724D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6B12DA50-4C8C-4A91-ADD4-230F4BB0724D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6B12DA50-4C8C-4A91-ADD4-230F4BB0724D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9D938B9-C4C6-437F-837C-C1558813FADA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9D938B9-C4C6-437F-837C-C1558813FADA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9D938B9-C4C6-437F-837C-C1558813FADA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9D938B9-C4C6-437F-837C-C1558813FADA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

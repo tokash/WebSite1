@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using ICSharpCode.SharpZipLib.Zip;
 
-namespace FBResultsFileReader
+namespace FBDataEngine
 {
     public class DocxToText
 {

@@ -7,9 +7,9 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 
-namespace FBResultsFileReader
+namespace FBDataEngine
 {
-    class FBResultsFileReader
+    public class FBResultsFileReader
     {
         #region Members
         List<string> _RawFileData = new List<string>();
@@ -82,6 +82,76 @@ namespace FBResultsFileReader
             {
                 throw new Exception(string.Format("File: {0} doesn't exist", iFilepath));
             }
+        }
+
+        public List<Post> GetPostsFromFile(string iFilepath)
+        {
+            List<Post> filePosts = new List<Post>();
+
+            if (File.Exists(iFilepath))
+            {
+                try 
+	            {
+                    ReadFile(iFilepath);
+
+                    int i = 0;
+                    string feed = string.Empty;
+                    string postMessage = string.Empty;
+                    DateTime createdAt = DateTime.Now;
+
+                    while( i < _RawFileData.Count)
+                    {
+                        if (_RawFileData[i].Contains("Feed:"))
+                        {
+                            feed = _RawFileData[i].Substring(5);
+                        }
+                        else if (_RawFileData[i].Contains("Post message:"))
+                        {
+                            postMessage = _RawFileData[i].Substring(13);
+                        }
+                        else if (_RawFileData[i].Contains("Created at: "))
+                        {
+                            if (_RawFileData[i].Length >= 30)
+                            {
+                                createdAt = DateTime.Parse(_RawFileData[i].Substring(12));
+                            }
+                            else
+                            {
+                                createdAt = DateTime.MinValue;
+                            }
+                        }
+                        else if (_RawFileData[i].Contains("Commenters:"))
+                        {
+                            List<Comment> comments = ParsePostComments(ref i);
+                            i--;
+                            filePosts.Add(new Post()
+                                                {
+                                                    Feed = feed,
+                                                    PostMessage = postMessage,
+                                                    CreatedAt = createdAt,
+                                                    Comments = comments.Count > 0 ? comments : null
+                                                });
+
+                            feed = string.Empty;
+                            postMessage = string.Empty;
+                            createdAt = DateTime.Now;
+                        }
+
+                        i++;
+                    }
+	            }
+	            catch (Exception)
+	            {
+		
+		            throw;
+	            }
+            }
+            else
+            {
+                throw new Exception(string.Format("File: {0} doesn't exist", iFilepath));
+            }
+
+            return filePosts;
         }
 
         private List<Comment> ParsePostComments(ref int iLineIndex)
