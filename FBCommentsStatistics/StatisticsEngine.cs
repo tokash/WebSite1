@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using FBDataEngine;
+
 
 namespace FBCommentsStatistics
 {
@@ -97,6 +99,103 @@ namespace FBCommentsStatistics
             }
         }
 
+        public void CalcStatisticsForFile(string iFilename, Func<Comment, int> iFunc, ref List<CommentStatistics> iCommentStatistics, string iStatisticType)
+        {
+            List<Post> posts = fbReader.GetPostsFromFile(iFilename);
+            bool flag = true;
+
+            for (int i = 0; i < posts.Count; i++)
+            {
+                if (posts[i].Comments != null && posts[i].Comments.Count > 0)
+                {
+                    foreach (Comment comment in posts[i].Comments)
+                    {
+                        CommentStatistics curr = new CommentStatistics();
+                        string type = string.Empty;
+
+                        curr._Comment = comment;
+
+                        if (comment.Taxonomy != "0")
+                        {
+                            curr._Type = "UDL";
+                        }
+                        else
+                        {
+                            curr._Type = "non-UDL";
+                        }
+
+                        PropertyStatistic ps = new PropertyStatistic() { Name = iStatisticType, Statistic = iFunc(comment)};
+                            
+                        curr._Properties.Add(ps);
+
+                        iCommentStatistics.Add(curr);
+                    }
+                }
+            }
+        }
+
+        public void CalcStatisticsForFile(string iFilename, List<KeyValuePair<string, Func<Comment, int>>> iFuncList, ref List<CommentStatistics> iCommentStatistics)
+        {
+            List<Post> posts = fbReader.GetPostsFromFile(iFilename);
+            bool flag = true;
+
+            for (int i = 0; i < posts.Count; i++)
+            {
+                if (posts[i].Comments != null && posts[i].Comments.Count > 0)
+                {
+                    foreach (Comment comment in posts[i].Comments)
+                    {
+                        CommentStatistics curr = new CommentStatistics();
+                        string type = string.Empty;
+
+                        curr._Comment = comment;
+
+                        if (comment.Taxonomy != "0")
+                        {
+                            curr._Type = "UDL";
+                        }
+                        else
+                        {
+                            curr._Type = "non-UDL";
+                        }
+
+                        foreach (KeyValuePair<string, Func<Comment, int>> item in iFuncList)
+                        {
+                            PropertyStatistic ps = new PropertyStatistic() { Name = item.Key, Statistic = item.Value(comment) };
+
+                            curr._Properties.Add(ps); 
+                        }
+
+                        iCommentStatistics.Add(curr);
+                    }
+                }
+            }
+        }
+
+
+        public void CalcStatisticsForDirectory(string iDirectoryPath, List<KeyValuePair<string, Func<Comment, int>>> iFuncList, ref List<CommentStatistics> iCommentStatistics)
+        {
+            string[] files = Directory.GetFiles(iDirectoryPath);
+
+            foreach (string file in files)
+            {
+                CalcStatisticsForFile(file, iFuncList, ref iCommentStatistics);
+            }
+        }
+
+        public void CalcStatisticsForDirectory(string iDirectoryPath, Func<Comment, int> iFunc, ref List<CommentStatistics> iCommentStatistics, string[] iWantedProperties)
+        {
+            string[] files = Directory.GetFiles(iDirectoryPath);
+
+            foreach (string property in iWantedProperties)
+	        {
+		        foreach (string file in files)
+                {
+                    CalcStatisticsForFile(file, iFunc, ref iCommentStatistics, property);
+                }
+	        }
+        }
+
         public void CalcStatisticsForDirectory(string iDirectoryPath, Func<Comment, int> iFunc, ref int iCounter)
         {
             string[] files = Directory.GetFiles(iDirectoryPath);
@@ -118,6 +217,12 @@ namespace FBCommentsStatistics
         }
 
         public Func<Comment, int> CountTotalWords = x => x.CommentMessage.Split(' ').Length - 1;
+
+        public Func<Comment, int> CountExclamtionMarks = x => x.CommentMessage.Count(y => y == '!');
+
+        public Func<Comment, int> CountSmilies = x => Regex.Matches(x.CommentMessage, ":\\)").Count;
+
+        public Func<Comment, int> CountS3Dots = x => Regex.Matches(x.CommentMessage, "\\.\\.\\.").Count;
 
         public void WriteToCSVFile(string iFilename, string[] iHeadlines, Dictionary<int, int> iData)
         {
