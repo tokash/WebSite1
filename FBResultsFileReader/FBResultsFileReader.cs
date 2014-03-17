@@ -209,7 +209,14 @@ namespace FBDataEngine
                         startIdx = 16 + data.Length;
                     }
 
-                    commentDate = DateTime.Parse(_RawFileData[iLineIndex].Substring(startIdx));
+                    try
+                    {
+                        commentDate = DateTime.Parse(_RawFileData[iLineIndex].Substring(startIdx));
+                    }
+                    catch (Exception)
+                    {
+                        
+                    }
                 }
                 else if (/*_RawFileData[iLineIndex] == string.Empty &&*/ comment != string.Empty && commentDate != DateTime.MinValue)
                 {

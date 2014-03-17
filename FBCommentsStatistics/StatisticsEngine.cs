@@ -143,14 +143,14 @@ namespace FBCommentsStatistics
             {
                 if (posts[i].Comments != null && posts[i].Comments.Count > 0)
                 {
-                    foreach (Comment comment in posts[i].Comments)
+                    for (int j = 0; j < posts[i].Comments.Count; j++ )
                     {
                         CommentStatistics curr = new CommentStatistics();
                         string type = string.Empty;
 
-                        curr._Comment = comment;
+                        curr._Comment = posts[i].Comments[j];
 
-                        if (comment.Taxonomy != "0")
+                        if (posts[i].Comments[j].Taxonomy != "0")
                         {
                             curr._Type = "UDL";
                         }
@@ -159,11 +159,13 @@ namespace FBCommentsStatistics
                             curr._Type = "non-UDL";
                         }
 
+                        curr._Rank = j + 1;
+
                         foreach (KeyValuePair<string, Func<Comment, int>> item in iFuncList)
                         {
-                            PropertyStatistic ps = new PropertyStatistic() { Name = item.Key, Statistic = item.Value(comment) };
+                            PropertyStatistic ps = new PropertyStatistic() { Name = item.Key, Statistic = item.Value(posts[i].Comments[j]) };
 
-                            curr._Properties.Add(ps); 
+                            curr._Properties.Add(ps);
                         }
 
                         iCommentStatistics.Add(curr);
@@ -171,7 +173,6 @@ namespace FBCommentsStatistics
                 }
             }
         }
-
 
         public void CalcStatisticsForDirectory(string iDirectoryPath, List<KeyValuePair<string, Func<Comment, int>>> iFuncList, ref List<CommentStatistics> iCommentStatistics)
         {
@@ -222,7 +223,34 @@ namespace FBCommentsStatistics
 
         public Func<Comment, int> CountSmilies = x => Regex.Matches(x.CommentMessage, ":\\)").Count;
 
-        public Func<Comment, int> CountS3Dots = x => Regex.Matches(x.CommentMessage, "\\.\\.\\.").Count;
+        public Func<Comment, int> CountWinks = x => Regex.Matches(x.CommentMessage, ";\\)").Count;
+
+        public Func<Comment, int> Count3Dots = x => Regex.Matches(x.CommentMessage, "\\.\\.\\.").Count;
+
+        //[\u05D0-\u05F4]
+        //Aleph - u05D1
+        //Bet - u05D2
+        //Gimel - u05D3
+        //Dalet - u05D4
+        //He - u05D5
+        //Vav - u05D6
+        //Zayin - u05D7
+        //Het - u05D8
+        //Tet - u05D9
+        //Yod - u05DA
+        //Chaf - u05DB
+        //Lamed - u05DC
+        //Mem - u05DE
+        //Nun - u05E0
+        //Samech - u05E1
+        //Ayin - u05E2
+        //Peh - u05E4
+        //Zadik - u05E6
+        //Kof - u05E7
+        //Reish - u05E8
+        //Shin - u05E9
+        //Tav - u05EB
+        public Func<Comment, int> Count3LettersOrMore = x => Regex.Matches(x.CommentMessage, "(\\w)\\1{2,}").Count;
 
         public void WriteToCSVFile(string iFilename, string[] iHeadlines, Dictionary<int, int> iData)
         {
@@ -243,6 +271,47 @@ namespace FBCommentsStatistics
                     string line = string.Format("{0},{1}", record.Key, record.Value);
                     writer.WriteLine(line);
 	            }
+            }
+        }
+
+        public void WriteDataToCSV(string iFilename, string[] iHeadlines, List<CommentStatistics> iCommentStatistics)
+        {
+            string headline = string.Empty;
+
+            //take care of headlines
+            for (int i = 0; i < iHeadlines.Length; i++)
+            {
+                headline += iHeadlines[i] + ",";
+            }
+
+            for (int i = 0; i < iCommentStatistics[0]._Properties.Count - 1; i++)
+            {
+                headline += iCommentStatistics[0]._Properties[i].Name + ",";
+            }
+            headline += iCommentStatistics[0]._Properties[iCommentStatistics[0]._Properties.Count - 1].Name;
+
+            using (StreamWriter writer = new StreamWriter(iFilename, true))
+            {
+                writer.WriteLine(headline);
+                foreach (CommentStatistics record in iCommentStatistics)
+                {
+                    string baseline = string.Format("{0},{1},{2},{3},{4},{5}",
+                        record._Type,
+                        record._Comment.Taxonomy.Replace(',', ';'),
+                        record._Comment.CommentMessage.Replace(',', ' '),
+                        record._Comment.CommentDate.Date.ToString("d"),
+                        record._Comment.CommentDate.TimeOfDay,
+                        record._Rank);
+
+                    string statProperties = string.Empty;
+                    foreach (PropertyStatistic item in record._Properties)
+                    {
+                        statProperties += item.Statistic + ",";
+                    }
+
+                    string line = baseline + "," +statProperties;
+                    writer.WriteLine(line);
+                }
             }
         }
     }

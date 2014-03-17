@@ -11,6 +11,7 @@ namespace FBCommentsStatistics
     {
         public Comment _Comment { get; set; }
         public string _Type { get; set; }
+        public int _Rank { get; set; }
         public List<PropertyStatistic> _Properties = new List<PropertyStatistic>();           
     }
 }
