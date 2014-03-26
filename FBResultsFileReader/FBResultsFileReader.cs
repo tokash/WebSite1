@@ -92,6 +92,7 @@ namespace FBDataEngine
             {
                 try 
 	            {
+                    _RawFileData.Clear();
                     ReadFile(iFilepath);
 
                     int i = 0;

@@ -150,7 +150,7 @@ namespace FBCommentsStatistics
 
                         curr._Comment = posts[i].Comments[j];
 
-                        if (posts[i].Comments[j].Taxonomy != "0")
+                        if (posts[i].Comments[j].Taxonomy != "0" && posts[i].Comments[j].Taxonomy != "@")
                         {
                             curr._Type = "UDL";
                         }
