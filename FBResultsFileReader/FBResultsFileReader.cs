@@ -204,7 +204,7 @@ namespace FBDataEngine
                     startIdx = 14;
                     if (_RawFileData[iLineIndex].StartsWith("#"))
                     {
-                        //isMeaningfull = true;
+                        isMeaningfull = true;
                         //startIdx = 16;
                         data = ExtractDataBetweenCharacters(_RawFileData[iLineIndex], "#");
                         startIdx = 16 + data.Length;
@@ -223,10 +223,15 @@ namespace FBDataEngine
                 {
                     if (commenter != string.Empty && commenterLink != string.Empty)
                     {
-                        if(data == string.Empty)
+                        if (isMeaningfull == true && data == string.Empty)
+                        {
+                            data = "9999";
+                        }
+                        else if(isMeaningfull == false)
                         {
                             data = "0";
                         }
+                        
 
                         comments.Add(new Comment() { CommentDate = commentDate,
                                                      Commenter = commenter,

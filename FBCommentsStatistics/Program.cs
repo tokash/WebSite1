@@ -33,7 +33,8 @@ namespace FBCommentsStatistics
             //string directoryPath = @"D:\Dropbox\BIU Group\Qualitative research\Case Study for Graphs\c.s data_other relevant";
             //string directoryPath = @"D:\Dropbox\BIU Group\Qualitative research\Case Study for Graphs\c.s data for graphs_UDL";
             //string directoryPath = @"D:\Dropbox\BIU Group\Qualitative research\Case Study for Graphs\c.s data for graphs no UDL";
-            string directoryPath = @"C:\Users\Tokashyo\Documents\Visual Studio 2012\Projects\WebSite1\FBCommentsStatistics\bin\Debug\test";
+            //string directoryPath = @"C:\Users\Tokashyo\Documents\Visual Studio 2012\Projects\WebSite1\FBCommentsStatistics\bin\Debug\test";
+            string directoryPath = @"D:\Dropbox\BIU Group\Qualitative research\Case Study for Graphs\c.s data for graphs_all cases";
             
             string statsFilename = string.Format("{0}_Stats_{1}.csv", Path.GetFileName(directoryPath), DateTime.Now.ToString("dd.MM.yyyy.HH.mm.ss.ffff"));
 

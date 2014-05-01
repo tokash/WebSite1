@@ -360,7 +360,14 @@ namespace FacebookCrawler
                     string res = result.ToString();
 
                     FacebookFeed facebookFeed = JsonConvert.DeserializeObject<FacebookFeed>(res);
-                    posts.AddRange(facebookFeed.data);
+
+                    foreach (Datum item in facebookFeed.data)
+                    {
+                        if (item.message != string.Empty)
+                        {
+                            posts.Add(item);
+                        }
+                    }
 
                     while (facebookFeed.paging != null)
                     {
@@ -369,7 +376,15 @@ namespace FacebookCrawler
                             result = _FBClient.Get(facebookFeed.paging.next);
                             res = result.ToString();
                             facebookFeed = JsonConvert.DeserializeObject<FacebookFeed>(res);
-                            posts.AddRange(facebookFeed.data); 
+
+
+                            foreach (Datum item in facebookFeed.data)
+                            {
+                                if (item.message != string.Empty)
+                                {
+                                    posts.Add(item);
+                                }
+                            }
                         }
                     }
 
@@ -1105,6 +1120,169 @@ namespace FacebookCrawler
             return posts;
         }
 
+        public List<Datum> GetAllPostsFromFeed(string iUserName, ref int oTotalPosts, ref DateTime oLastPostDate)
+        {
+            List<Datum> posts = new List<Datum>();
+            Datum lastPost = null;
+            int numTotalPosts = 0;
+            bool noNewPosts = false;
+            DateTime next;
+
+            string fbCommand = string.Format("/{0}/feed", iUserName);
+            object result = _FBClient.Get(fbCommand);
+            System.Threading.Thread.Sleep(1000);
+            string res = result.ToString();
+
+            FacebookFeed facebookFeed = JsonConvert.DeserializeObject<FacebookFeed>(res);
+            if (facebookFeed.data.Count > 0)
+            {
+                lastPost = facebookFeed.data[facebookFeed.data.Count - 1];
+            }
+            numTotalPosts += facebookFeed.data.Count;
+
+            foreach (Datum post in facebookFeed.data)
+            {
+                DateTime createdTime = DateTime.Parse(post.created_time);
+
+                if (post.message != null)
+                {
+                    if (!posts.Contains(post))
+                    {
+                        posts.Add(post);
+                    }
+                 
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            while (noNewPosts == false)
+            {
+                try
+                {
+                    if (facebookFeed.paging != null)
+                    {
+                        string nextCursor = HttpUtility.ParseQueryString(facebookFeed.paging.next).Get("until");
+                        next = Facebook.DateTimeConvertor.FromUnixTime(nextCursor);
+
+                        using (StreamWriter sw = new StreamWriter("Log.txt", true))
+                        {
+                            sw.WriteLine(string.Format("{0}: next post is from the {1}", DateTime.Now, next));
+                        }
+
+
+                        while (facebookFeed.paging != null)
+                        {
+                            if (facebookFeed.paging.next != string.Empty)
+                            {
+                                result = _FBClient.Get(facebookFeed.paging.next);
+                                System.Threading.Thread.Sleep(1000);
+                                res = result.ToString();
+                                facebookFeed = JsonConvert.DeserializeObject<FacebookFeed>(res);
+
+                                if (facebookFeed.data.Count > 0)
+                                {
+                                    DateTime lastPostInCurrentFeedPageCreationTime = DateTime.Parse(facebookFeed.data[facebookFeed.data.Count - 1].created_time);
+                                    DateTime currLastPostCreationTime = DateTime.Parse(lastPost.created_time);
+                                    if (lastPostInCurrentFeedPageCreationTime < currLastPostCreationTime)
+                                    {
+                                        lastPost = facebookFeed.data[facebookFeed.data.Count - 1];
+                                    }
+                                    else
+                                    {
+                                        noNewPosts = true;
+                                        break; //posts arriving from facebook are later than current last post (last post in current feed page is newer than last post -> not logical)
+                                    }
+                                }
+                                numTotalPosts += facebookFeed.data.Count;
+
+                                foreach (Datum post in facebookFeed.data)
+                                {
+                                    DateTime createdTime = DateTime.Parse(post.created_time);
+
+                                    if (post.message != null)
+                                    {
+                                        if (!posts.Contains(post))
+                                        {
+                                            posts.Add(post);
+                                        }
+                                    }
+
+                                    if (facebookFeed.paging != null)
+                                    {
+                                        //string param1 = HttpUtility.ParseQueryString(myUri.Query).Get("param1");
+                                        nextCursor = HttpUtility.ParseQueryString(facebookFeed.paging.next).Get("until");
+                                        next = Facebook.DateTimeConvertor.FromUnixTime(nextCursor);
+
+                                        using (StreamWriter sw = new StreamWriter("Log.txt", true))
+                                        {
+                                            sw.WriteLine(string.Format("{0}: next post is from the {1}", DateTime.Now, next));
+                                        }
+                                    }
+                                    else
+                                    {
+                                        break; // no more posts
+                                    }
+                                }
+                            }
+
+                            Console.WriteLine(String.Format("{0}: Total posts processed: {1}\nNumber of Meaningfull posts found: {2}", DateTime.Now, numTotalPosts, posts.Count));
+                        }
+                        Console.WriteLine(String.Format("{0}: While loop exited...", DateTime.Now));
+
+
+                        if (facebookFeed.paging == null)
+                        {
+                            break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (ex.Message.Contains("4")) //App level rate limit - sleep 60 minutes
+                    {
+                        Console.WriteLine(String.Format("{0}: Waiting 60 minutes - App level limit reached", DateTime.Now));
+                        System.Threading.Thread.Sleep(3600000);
+                    }
+                    else if (ex.Message.Contains("17")) //User level rate limit - sleep 30 minutes
+                    {
+                        Console.WriteLine(String.Format("Waiting 30 minutes - User level limit reached", DateTime.Now));
+                        System.Threading.Thread.Sleep(1800000);
+                    }
+                    else if (ex.Message.Contains("2"))
+                    {
+                        System.Threading.Thread.Sleep(2000);
+                        DateTime exceptionTime = DateTime.Now;
+
+                        if (exceptionTime - _LastExceptionTime < new TimeSpan(0, 0, 10))
+                        {
+                            break; //there is a problem with the pagination process 
+                        }
+                        else
+                        {
+                            _LastExceptionTime = exceptionTime;
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine(String.Format("{0}: {1}", DateTime.Now, ex.ToString()));
+                        break;
+                    }
+                }
+            }
+
+            if (lastPost != null)
+            {
+                oLastPostDate = Convert.ToDateTime(lastPost.created_time);
+            }
+
+            oTotalPosts = numTotalPosts;
+
+            return posts;
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -1223,6 +1401,58 @@ namespace FacebookCrawler
 
             Console.WriteLine("{0}:{1} is Writing data to file...", DateTime.Now, Thread.CurrentThread.Name);
             TextFileWriter.TextFileWriter.WriteTextFile(string.Format("{0}{1}.txt",fileRepository, iFeedName), results);
+            Console.WriteLine("{0}:{1} is done Writing data to file...", DateTime.Now, Thread.CurrentThread.Name);
+            sw.Stop();
+            Console.WriteLine("{0}:{1} is DONE, total work time for thread: {2}", DateTime.Now, Thread.CurrentThread.Name, sw.Elapsed);
+
+            _Semaphore.Release();
+        }
+
+        public void GetAllFeedInformation(string iFeedName)
+        {
+            Stopwatch sw = new Stopwatch();
+
+            Console.WriteLine("{0}:{1} is waiting in line...", DateTime.Now, Thread.CurrentThread.Name);
+            _Semaphore.WaitOne();
+            sw.Start();
+            Console.WriteLine("{0}:{1} is Working...", DateTime.Now, Thread.CurrentThread.Name);
+            //List<Datum> totalPosts = new List<Datum>();
+            int totalPosts = 0;
+            DateTime lastPostDate = DateTime.Now;
+
+            //List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName, "[\u0591-\u05F4][\u0591-\u05F4]\"[\u0591-\u05F4] [\u0591-\u05F4]\'", iStartTime, iEndTime, ref totalPosts, ref lastPostDate);
+            //List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName, "", iStartTime, iEndTime, ref totalPosts);
+            //List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName,  " [\u0591-\u05F4]\'[^(\u0591-\u05F4)]", iStartTime, iEndTime, ref totalPosts);
+            //List<Datum> posts = GetPostsMatchingRegexPattern(iFeedName, " [\u0591-\u05F4]\'[^(\u0591-\u05F4)]", iStartTime, iEndTime, ref totalPosts, ref lastPostDate);
+
+            List<Datum> posts = GetAllPostsFromFeed(iFeedName);
+
+            Console.WriteLine("{0}:{1} is gathering data for found posts...", DateTime.Now, Thread.CurrentThread.Name);
+            foreach (Datum post in posts)
+            {
+                if (post.comments != null)
+                {
+                    post.comments.data.AddRange(GetMoreCommentsForPost(post));
+                }
+            }
+
+            Console.WriteLine("{0}:{1} is Writing data to file...", DateTime.Now, Thread.CurrentThread.Name);
+            string fileRepository = ConfigurationManager.AppSettings["ResultsLocation"];
+
+            string results = string.Empty;
+            foreach (Datum post in posts)
+            {
+                results = _FBResultFormatter.FormatFBPost(post, iFeedName);
+                TextFileWriter.TextFileWriter.WriteTextFile(string.Format("{0}{1}.txt", fileRepository, iFeedName), results);
+            }
+
+            DateTime startTime = Convert.ToDateTime(posts[posts.Count - 1].created_time);
+            DateTime endTime = Convert.ToDateTime(posts[0].created_time);
+
+            _FBResultFormatter.FormatFBStats(posts.Count, posts.Count, startTime, endTime, lastPostDate, ref results);
+            Console.WriteLine("{0}:{1} is done gathering data for found posts...", DateTime.Now, Thread.CurrentThread.Name);
+            
+            TextFileWriter.TextFileWriter.WriteTextFile(string.Format("{0}{1}.txt", fileRepository, iFeedName), results);
             Console.WriteLine("{0}:{1} is done Writing data to file...", DateTime.Now, Thread.CurrentThread.Name);
             sw.Stop();
             Console.WriteLine("{0}:{1} is DONE, total work time for thread: {2}", DateTime.Now, Thread.CurrentThread.Name, sw.Elapsed);

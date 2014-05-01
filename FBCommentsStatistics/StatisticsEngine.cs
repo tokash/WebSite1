@@ -150,7 +150,7 @@ namespace FBCommentsStatistics
 
                         curr._Comment = posts[i].Comments[j];
 
-                        if (posts[i].Comments[j].Taxonomy != "0" && posts[i].Comments[j].Taxonomy != "@")
+                        if (posts[i].Comments[j].Taxonomy != "0")// && posts[i].Comments[j].Taxonomy != "@")
                         {
                             curr._Type = "UDL";
                         }
@@ -215,9 +215,9 @@ namespace FBCommentsStatistics
             {
                 CalcStatisticsForFile(file, iFunc, ref iType1, ref iType2);
             }
-        }
+        }        
 
-        public Func<Comment, int> CountTotalWords = x => x.CommentMessage.Split(' ').Length - 1;
+        public Func<Comment, int> CountTotalWords = x => Regex.Matches(x.CommentMessage, @"[\S]+").Count;
 
         public Func<Comment, int> CountExclamtionMarks = x => x.CommentMessage.Count(y => y == '!');
 
