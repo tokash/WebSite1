@@ -410,6 +410,122 @@ namespace FacebookCrawler
             return posts;
         }
 
+        public void GetAllPostsFromFeedAndWriteToFile(string iUserName)
+        {
+            string results = string.Empty;
+            string fileRepository = ConfigurationManager.AppSettings["ResultsLocation"];
+            DateTime lastPostTime = DateTime.MinValue;
+            DateTime firstPostTime = DateTime.Now;
+            int totalPosts = 0;
+
+            //GET /me/feed
+            while (true)
+            {
+                try
+                {
+                    object result = _FBClient.Get(string.Format("/{0}/feed", iUserName));
+                    string res = result.ToString();
+
+                    FacebookFeed facebookFeed = JsonConvert.DeserializeObject<FacebookFeed>(res);
+
+                    foreach (Datum item in facebookFeed.data)
+                    {
+                        if (item.message != string.Empty)
+                        {
+                            totalPosts++;
+
+                            DateTime currPostDate = Convert.ToDateTime(item.created_time);
+                            if (currPostDate > lastPostTime)
+                            {
+                                lastPostTime = currPostDate;
+                            }
+
+                            if (currPostDate < firstPostTime)
+                            {
+                                firstPostTime = currPostDate;
+                            }
+
+                            //Write to file
+                            if (item.comments != null)
+                            {
+                                item.comments.data.AddRange(GetMoreCommentsForPost(item));
+                            }
+                            results = _FBResultFormatter.FormatFBPost(item, iUserName);
+
+                            TextFileWriter.TextFileWriter.WriteTextFile(string.Format("{0}{1}.txt", fileRepository, iUserName), results);
+                        }
+                    }
+
+                    
+
+                    while (facebookFeed.paging != null)
+                    {
+                        if (facebookFeed.paging.next != string.Empty)
+                        {
+                            result = _FBClient.Get(facebookFeed.paging.next);
+                            res = result.ToString();
+                            facebookFeed = JsonConvert.DeserializeObject<FacebookFeed>(res);
+
+
+                            foreach (Datum item in facebookFeed.data)
+                            {
+                                if (item.message != string.Empty)
+                                {
+                                    totalPosts++;
+                                    DateTime currPostDate = Convert.ToDateTime(item.created_time);
+                                    if (currPostDate > lastPostTime)
+                                    {
+                                        lastPostTime = currPostDate;
+                                    }
+
+                                    if (currPostDate < firstPostTime)
+                                    {
+                                        firstPostTime = currPostDate;
+                                    }
+
+                                    //Write to file
+                                    if (item.comments != null)
+                                    {
+                                        item.comments.data.AddRange(GetMoreCommentsForPost(item));
+                                    }
+                                    results = _FBResultFormatter.FormatFBPost(item, iUserName);
+
+                                    TextFileWriter.TextFileWriter.WriteTextFile(string.Format("{0}{1}.txt", fileRepository, iUserName), results);
+                                }
+                            }
+                        }
+                    }
+
+                    if (facebookFeed.paging == null)
+                    {
+                        break;
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    if (ex.Message.Contains("4")) //App level rate limit - sleep 60 minutes
+                    {
+                        System.Threading.Thread.Sleep(3600000);
+                    }
+                    else if (ex.Message.Contains("17")) //User level rate limit - sleep 30 minutes
+                    {
+                        System.Threading.Thread.Sleep(1800000);
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+            }
+
+            
+
+            //Write other stats to file
+            _FBResultFormatter.FormatFBStats(totalPosts, totalPosts, lastPostTime, firstPostTime, firstPostTime, ref results);
+            TextFileWriter.TextFileWriter.WriteTextFile(string.Format("{0}{1}.txt", fileRepository, iUserName), results);
+        }
+
         public List<Datum> GetPostsMatchingRegexPattern(string iUserName, List<string> iRegexPattern, DateTime iSince, DateTime iUntil, ref List<Datum> oTotalPosts)
         {
             List<Datum> posts = new List<Datum>();
@@ -1311,8 +1427,20 @@ namespace FacebookCrawler
                                 string res = result.ToString();
                                 Comments currCommentsBatch = JsonConvert.DeserializeObject<Comments>(res);
 
-                                comments.AddRange(currCommentsBatch.data);
-                                nextPage = currCommentsBatch.paging.next;
+                                if (currCommentsBatch.data != null && currCommentsBatch.data.Count > 0)
+                                {
+                                    comments.AddRange(currCommentsBatch.data);    
+                                }
+
+                                if (currCommentsBatch.paging != null)
+                                {
+                                    nextPage = currCommentsBatch.paging.next;
+                                }
+                                else
+                                {
+                                    nextPage = null;
+                                }
+                                
                             }
                         }
                     }

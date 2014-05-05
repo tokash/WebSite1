@@ -50,7 +50,7 @@ namespace FacebookCrawler
 
             foreach (string feed in FBPagesToTraverse)
             {
-                Thread t = new Thread(() => fb.GetAllFeedInformation(feed));
+                Thread t = new Thread(() => fb.GetAllPostsFromFeedAndWriteToFile(feed));
                 t.Name = String.Format("{0}_{1}", feed, Guid.NewGuid());
 
                 t.Start();
